@@ -1,6 +1,12 @@
 {
   src
   {
-        GlobalVars.m
+        basics.m
+        conjugacy.m
+        crystal.m
+        derivations.m
+        global_variables.m
+        normalizer.m
+        utility.m
   }
 }

@@ -1,7 +1,8 @@
-import "utility.m" : RESTRICT;
+import "utility.m" : MySort;
+import "normalizer.m" : __AnnihilatesModule;
 
 /* decides conjugacy between two matrix Lie algebras acting irreducibly on their modules */
-IS_CONJUGATE_IRREDUCIBLE := function (J1, E1, F1, J2, E2, F2)  
+__IsConjugate_IRRED := function (J1, E1, F1, J2, E2, F2)  
      assert IsIrreducible (RModule (J1)) and IsIrreducible (RModule (J2));
      C1 := CrystalBasis (J1 : E := E1, F := F1);
      C2 := CrystalBasis (J2 : E := E2, F := F2);
@@ -9,14 +10,19 @@ IS_CONJUGATE_IRREDUCIBLE := function (J1, E1, F1, J2, E2, F2)
      K2 := sub < Generic (J2) | [ C2 * Matrix (J2.i) * C2^-1 : i in [1..Ngens (J2)] ] >;
      C := C1^-1 * C2;
      isit := (K1 eq K2);
+     if not isit then
+          vprint MatrixLie, 1 : "crystal bases do not give module similarity";
+          vprint MatrixLie, 1 : "C1 =", C1;
+          vprint MatrixLie, 1 : "C2 =", C2; 
+     end if;
      if isit then
           assert J2 eq sub < Generic (J1) | [ C^-1 * Matrix (J1.i) * C : i in [1..Ngens (J1)] ] >;
           E1C := [ C^-1 * Matrix (E1[i]) * C : i in [1..#E1] ];
           F1C := [ C^-1 * Matrix (F1[i]) * C : i in [1..#F1] ];
           CHEV_EQ := forall { i : i in [1..#E1C] | E1C[i] eq Matrix (E2[i]) };
           if not CHEV_EQ then
-               printf "\t\t   E1C =\n"; E1C;
-               printf "\t\t   E2 =\n"; E2;
+               vprintf MatrixLie, 1 : "\t\t   E1C =\n"; E1C;
+               vprintf MatrixLie, 1 : "\t\t   E2 =\n"; E2;
           end if;
      end if;
 return isit, C; 
@@ -31,14 +37,14 @@ end function;
     * SUMMANDS is a list of irreducible L-submodules of the given L-module V.
     * SUPPORTS for each irreducible L-submodule records the ideals that act nontrivially.
 */
-PREPROCESS_SEMISIMPLE := function (L)
+__PreprocessSemisimple := function (L)
      k := BaseRing (L);
      d := Degree (L);
      V := VectorSpace (k, d);
      /* first find ideals and sort them */
      IDEALS := IndecomposableSummands (L);
      n := #IDEALS; S := {1..n};
-     Sort (~IDEALS, func<x,y| MY_SORT (SemisimpleType(x),SemisimpleType(y))>);
+     Sort (~IDEALS, func<x,y| MySort (SemisimpleType(x),SemisimpleType(y))>);
      TYPES := [ SemisimpleType (IDEALS[i]) : i in [1..n] ];
      /* find isomorphisms classes of minimal ideals and basic permutation group */
      PARTITION := [ ];
@@ -66,9 +72,9 @@ end function;
   indecomposable summand U, determine the support of U––those ideals
   represented nontrivially on U.
 */
-SUPPORT := function (IDEALS, U)
+__SupportOfModule := function (IDEALS, U)
      n := #IDEALS;
-     AU := { j : j in [1..n] | ANNIHILATES (IDEALS[j], U) };
+     AU := { j : j in [1..n] | __AnnihilatesModule (IDEALS[j], U) };
 return {1..n} diff AU;
 end function;
             
@@ -105,12 +111,12 @@ intrinsic IsConjugate (L1::AlgMatLie, L2::AlgMatLie : PARTITION := [ ]) ->
   
   /* deal with the irreducible case */
   if IsIrreducible (RModule (L1)) and IsIrreducible (RModule (L2)) then
-       return IS_CONJUGATE_IRREDUCIBLE (L1, E1, F1, L2, E2, F2);
+       return __IsConjugate_IRRED (L1, E1, F1, L2, E2, F2);
   end if;
   
   /* next carry out the preprocessing for the conjugacy test */
-  ID1, TYPES1, PART1, PERM1, SUMS1 := PREPROCESS_SEMISIMPLE (L1);
-  ID2, TYPES2, PART2, PERM2, SUMS2 := PREPROCESS_SEMISIMPLE (L2);
+  ID1, TYPES1, PART1, PERM1, SUMS1 := __PreprocessSemisimple (L1);
+  ID2, TYPES2, PART2, PERM2, SUMS2 := __PreprocessSemisimple (L2);
 vprint MatrixLie, 1 : "summand dimensions of first Lie module are", [ Dimension (U) : U in SUMS1 ];
 vprint MatrixLie, 1 : "summand dimensions of second Lie module are", [ Dimension (U) : U in SUMS2 ];
   
@@ -150,15 +156,15 @@ vprintf MatrixLie, 1 : " permutations of the minimal ideals of the second Lie al
             d1 := Dimension (U1);
             MLieU1 := MatrixLieAlgebra (k, d1);
             L1U1 := sub < MLieU1 |
-                    [ RESTRICT (Matrix (L1.a), U1) : a in [1..Ngens (L1)] ] >;
-            E1U1 := [ RESTRICT (Matrix(E1[a]), U1) : a in [1..#E1] ];
+                    [ RestrictAction (Matrix (L1.a), U1) : a in [1..Ngens (L1)] ] >;
+            E1U1 := [ RestrictAction (Matrix(E1[a]), U1) : a in [1..#E1] ];
             // some elements of E1 act trivially on U1 ... discard them
             E1U1 := [ MLieU1!(E1U1[a]) : a in [1..#E1U1] | E1U1[a] ne 0 ];
-            F1U1 := [ RESTRICT (Matrix(F1[a]), U1) : a in [1..#F1] ];
+            F1U1 := [ RestrictAction (Matrix(F1[a]), U1) : a in [1..#F1] ];
             // some elements of F1 act trivially on U1 ... discard them
             F1U1 := [ MLieU1!(F1U1[a]) : a in [1..#F1U1] | F1U1[a] ne 0 ];
-            S1 := SUPPORT (ID1, U1);
-            poss2 := [ b : b in [1..#rem2] | S1 eq SUPPORT (ID2, rem2[b])^pi 
+            S1 := __SupportOfModule (ID1, U1);
+            poss2 := [ b : b in [1..#rem2] | S1 eq __SupportOfModule (ID2, rem2[b])^pi 
                                          and Dimension (rem2[b]) eq d1 ];
 
             found := false;   // keeps track of whether or not we've found a U2
@@ -170,14 +176,14 @@ vprintf MatrixLie, 1 : " permutations of the minimal ideals of the second Lie al
                  d2 := Dimension (U2);
                  MLieU2 := MatrixLieAlgebra (k, d2);
                  L2U2 := sub < MLieU2 |
-                         [ RESTRICT (Matrix (L2.a), U2) : a in [1..Ngens (L2)] ] >;
-                 E2U2 := [ RESTRICT (Matrix(E2[a]), U2) : a in [1..#E2] ];
+                         [ RestrictAction (Matrix (L2.a), U2) : a in [1..Ngens (L2)] ] >;
+                 E2U2 := [ RestrictAction (Matrix(E2[a]), U2) : a in [1..#E2] ];
                  // some elements of E2 act trivially on U2 ... discard them
                  E2U2 := [ MLieU2!(E2U2[a]) : a in [1..#E2U2] | E2U2[a] ne 0 ];
-                 F2U2 := [ RESTRICT (Matrix(F2[a]), U2) : a in [1..#F2] ];
+                 F2U2 := [ RestrictAction (Matrix(F2[a]), U2) : a in [1..#F2] ];
                  // some elements of F2 act trivially on U2 ... discard them
                  F2U2 := [ MLieU2!(F2U2[a]) : a in [1..#F2U2] | F2U2[a] ne 0 ];
-                 isit, BC := IS_CONJUGATE_IRREDUCIBLE (L1U1, E1U1, F1U1, L2U2, E2U2, F2U2);
+                 isit, BC := __IsConjugate_IRRED (L1U1, E1U1, F1U1, L2U2, E2U2, F2U2);
 vprintf MatrixLie, 1 : "\t\t restriction to summands conjugate? %o\n", isit;
                  if isit then
                       found := true;

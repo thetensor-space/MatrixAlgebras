@@ -124,7 +124,7 @@ end function;
 // 28-dimensional D4 module
 D4Module := function (q)
      OCT := OctonionAlgebra (GF (q), -1, -1, -1);
-     t := Tensor (Oct\\CT);
+     t := Tensor (OCT);
      ChangeTensorCategory (~t, HomotopismCategory (3));
      D := DerivationAlgebra (t);
      DER := Induce (D, 0);
@@ -205,7 +205,7 @@ return Tensor (Forms, 2, 1);
 end function;
 
 
-MySemisimpleMatrixAlgebra := function (k, stypes, rtypes : SCRAMBLE := false)  
+MySemisimpleMatrixLieAlgebra := function (k, stypes, rtypes : SCRAMBLE := false)  
   // calculate the degree of the representation and the number of generators
   n := 0;
   m := 0;

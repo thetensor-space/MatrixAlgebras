@@ -20,7 +20,7 @@ intrinsic Exponentiate (z::AlgMatElt) -> GrpMatElt
 		v *:= z;
 	end while;
 return GL (Degree (Parent (z)), BaseRing (Parent (z)))!u;
-end function;
+end intrinsic;
 
 intrinsic Exponentiate (z::AlgMatLieElt) -> GrpMatElt
   { Exponentiate the nilpotent matrix z.}
