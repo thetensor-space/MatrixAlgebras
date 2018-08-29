@@ -1,4 +1,4 @@
-A package for matrix Lie algebras defined over finite fields by:
+A Magma package for matrix Lie algebras defined over finite fields by:
 
 Peter A. Brooksbank, Bucknell University
 Joshua Maglione, Kent State University
