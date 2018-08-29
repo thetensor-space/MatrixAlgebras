@@ -19,6 +19,12 @@ return forall { s : s in S |
 end function;
 
 
+ANNIHILATES := function (J, U)
+return forall { i : i in [1..Ngens (J)] | forall { t : t in [1..Ngens (U)] |
+          U.t * J.i eq 0 } };
+end function;
+
+
 /* returns generators for the lift of Out(J) to GL(V) when J < gl(V) is simple. */
 OUTER_SIMPLE := function (J, E, F)
 
@@ -169,7 +175,7 @@ intrinsic GLNormalizer (L::AlgMatLie : PARTITION := [ ]) -> GrpMat
   
   // find a Chevalley basis for L and use it to exponentiate
   E, F := ChevalleyBasis (L);
-  EXP := sub < G | [ EXPONENTIATE (z) : z in E cat F ] , C >;
+  EXP := sub < G | [ Exponentiate (z) : z in E cat F ] , C >;
 //"EXP / C has order", #EXP div #C;
   
   // put L into block diagonal form corresponding to the minimal ideals                    
