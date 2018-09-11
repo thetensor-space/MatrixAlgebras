@@ -5,7 +5,7 @@
           underlying k-algebra.    
     OUTPUT: true if, and only  if, A^s = A for all s in S.
 */
-__NormalizesLieAlgebra := function (A, S)  
+__NormalizesAlgebra := function (A, S)  
      k := BaseRing (A);
      n := Degree (A);
      MS := KMatrixSpace (k, n, n);
@@ -13,6 +13,18 @@ __NormalizesLieAlgebra := function (A, S)
 return forall { s : s in S | 
           forall { i : i in [1..Ngens (X)] |
               s^-1 * X.i * s in X
+                 }
+              };             
+end function;
+
+__CentralizesAlgebra := function (A, S);
+     k := BaseRing (A);
+     n := Degree (A);
+     MS := KMatrixSpace (k, n, n);
+     X := KMatrixSpaceWithBasis ([ MS!Matrix (x) : x in Basis (A) ]);    
+return forall { s : s in S | 
+          forall { i : i in [1..Ngens (X)] |
+              s^-1 * X.i * s eq X.i
                  }
               };             
 end function;
@@ -88,7 +100,7 @@ __OuterAutosOfSimple := function (J, E, F)
           end for;
           D0 := DiagonalMatrix (D0);
           Di := Ci^-1 * D0 * Ci;
-          assert __NormalizesLieAlgebra (Ji, [Di]);  // sanity check
+          assert __NormalizesAlgebra (Ji, [Di]);  // sanity check
           InsertBlock (~delta, Di, pos, pos);
           
           // try to lift remaining graph automorphisms
@@ -110,7 +122,7 @@ __OuterAutosOfSimple := function (J, E, F)
                g0 := Matrix (g0);
                if Rank (g0) eq Rank (Ci) then
                    g := Ci^-1 * GL (Nrows (g0), k)!g0 * Ci;
-                   if __NormalizesLieAlgebra (Ji, [g]) then
+                   if __NormalizesAlgebra (Ji, [g]) then
                        InsertBlock (~GAMMA[j], g, pos, pos);
                        Append (~NGAMMA, GAMMA[j]);
                        Append (~NGA, GA[j]);
@@ -124,8 +136,8 @@ __OuterAutosOfSimple := function (J, E, F)
           
      end for;
      
-     assert __NormalizesLieAlgebra (JC, [delta]);
-     assert __NormalizesLieAlgebra (JC, GAMMA);
+     assert __NormalizesAlgebra (JC, [delta]);
+     assert __NormalizesAlgebra (JC, GAMMA);
      
      gens := [ delta ] cat 
              [ gamma : gamma in GAMMA | gamma ne Identity (MatrixAlgebra (k, n)) ];
@@ -135,7 +147,23 @@ __OuterAutosOfSimple := function (J, E, F)
 return H;
 end function;
 
-
+__IsBlockDiagonalMatrix := function (X, partition)
+  n := Nrows (X);
+  assert n eq Ncols (X);
+  assert n eq &+ partition;
+  pos := 1;
+  isit := true;
+  for i in [1..#partition] do
+       m := partition[i];
+       isit and:= forall { s : s in [pos..pos+m-1] |
+                    forall { t : t in [pos+m..n] | 
+                        (X[s][t] eq 0) and (X[t][s] eq 0)
+                           }
+                         };
+       pos +:= m;
+  end for;
+return isit;
+end function;
 
 /* 
 Used the same name as the function created (presumably) by Colva for groups.
@@ -157,29 +185,62 @@ intrinsic GLNormalizer (L::AlgMatLie : PARTITION := [ ]) -> GrpMat
   G := GL (n, k);
   V := VectorSpace (k, n);
   
-  // get the minimal ideals of L and make sure they act "simply" on V   
+  if #PARTITION eq 0 then
+      PARTITION := [ n ];
+  end if;
+  vprint MatrixLie, 1 : "  [ GLNormalizer : PARTITION =", PARTITION, "]";
+  
+  require (n eq &+ PARTITION) : "the specified partition is incompatible with the degree of L";
+  
+  require forall { i : i in [1..Ngens (L)] | __IsBlockDiagonalMatrix (Matrix (L.i), PARTITION) } :
+     "the specified partition is incompatible with the block structure of L";
+     
+  // find a Chevalley basis for L and use it to exponentiate
+  E, F := ChevalleyBasis (L);
+  H := sub < G | [ Exponentiate (z) : z in E cat F ] >;
+  vprint MatrixLie, 1 : "  [ GLNormalizer: exponential subgroup has order", #H,"]";
+  vprint MatrixLie, 2 : CompositionFactors (H); 
+  
+  // compute the restrictions of L to the blocks determined by PARTITION,  
+  // and the subgroup centralizing L within GL(U1) x ... x GL(Ut)
+  BLOCKS := [ ];
+  CENTS := [ ];
+  MPART := [ ];
+  pos := 1;
+  for i in [1..#PARTITION] do
+      m := PARTITION[i];
+      Append (~MPART, sub < V | [ V.j : j in [pos..m-1+pos] ] >);
+      gens := [ ExtractBlock (Matrix (L.j), pos, pos, m, m) : j in [1..Ngens (L)] ];
+      Li := sub < MatrixLieAlgebra (k, m) | gens >;
+      Append (~BLOCKS, Li); 
+      Mi := RModule (Li);
+      CentMi := EndomorphismAlgebra (Mi);
+      Ci := MyUnitGroup (CentMi);
+      Append (~CENTS, Ci);
+      pos +:= m;
+  end for;
+  C := DirectProduct (CENTS);
+  assert __CentralizesAlgebra (L, [ C.i : i in [1..Ngens (C)] ]);
+  ord := #H;
+  H := sub < G | H , C >;
+  vprint MatrixLie, 1 : "  [ GLNormalizer: centralizer / exponential has order", #H div ord, "]";
+  vprint MatrixLie, 2 : CompositionFactors (H);
+  
+  // get the minimal ideals of L and make sure they act "simply" on V     
   MI := IndecomposableSummands (L);
   indV := [ sub < V | [ V.i * (J.j) : i in [1..n], j in [1..Ngens (J)] ] > : J in MI ];
   if #MI gt 1 then
       require forall { s : s in [1..#MI] |
-            ANNIHILATES (MI[s], &+ [indV[t] : t in [1..#indV] | s ne t ]) } :
-"not all irreducible L-modules are irreducible J-modules for some minimal ideal J of L";
+            __AnnihilatesModule (MI[s], &+ [indV[t] : t in [1..#indV] | s ne t ]) } :
+"not all summands of L are irreducible J-modules for some minimal ideal J of L";
   end if;
-
-  // compute the subgroup centralizing L
-  ModL := RModule (L);
-  CentL := EndomorphismAlgebra (ModL);
-  C := MyUnitGroup (CentL); 
-vprint MatrixLie, 1 : "the group, C, centralizing L has order", #C;
-  
-  // find a Chevalley basis for L and use it to exponentiate
-  E, F := ChevalleyBasis (L);
-  EXP := sub < G | [ Exponentiate (z) : z in E cat F ] , C >;
-vprint MatrixLie, 1 : "modulo C, the exponentiated group has order", #EXP div #C;
+  IDIMS := [ [ Dimension (indV[i] meet MPART[j]) : j in [1..#MPART] ] : i in [1..#indV] ];
+  assert forall { i : i in [1..#indV] | Dimension (indV[i]) eq &+ IDIMS[i] };
+  vprint MatrixLie, 2 : "    intersection dimensions:", IDIMS;
   
   // put L into block diagonal form corresponding to the minimal ideals                    
-  degs := [ Dimension (U) : U in indV ];
-  C := Matrix (&cat [ Basis (U) : U in indV ]);
+  degs := [ Dimension (indV[i]) : i in [1..#indV] ];
+  C := Matrix (&cat [ Basis (indV[i]) : i in [1..#indV] ]);
   LC := sub < Generic (L) | [ C * Matrix (L.i) * C^-1 : i in [1..Ngens (L)] ] >;
   MIC := [ sub < Generic (J) | [ C * Matrix (J.i) *C^-1 : i in [1..Ngens (J)] ] > :
                      J in MI ];
@@ -189,12 +250,25 @@ vprint MatrixLie, 1 : "modulo C, the exponentiated group has order", #EXP div #C
   // extract the blocks and construct the lifts of the outer automorphisms on each block
   pos := 1;
   aut_gens := [ ];
+  ISOTYPICS := [* *];
+  SIMPLES := [ ];
+  POSITIONS := [ ];
   for s in [1..#MIC] do
+       Append (~POSITIONS, pos);
        Js := sub < MatrixLieAlgebra (k, degs[s]) |
             [ ExtractBlock ((MIC[s]).j, pos, pos, degs[s], degs[s]) : 
                           j in [1..Ngens (MIC[s])] ] >;
        assert IsSimple (Js);
-       t := SemisimpleType (Js);                 
+       Append (~SIMPLES, Js);
+       t := SemisimpleType (Js);
+       if s eq 1 then
+            Append (~ISOTYPICS, <t, IDIMS[1], [s]>);
+       elif exists (i){ j : j in [1..#ISOTYPICS] | 
+                   (ISOTYPICS[j][1] eq t) and (ISOTYPICS[j][2] eq IDIMS[s]) } then
+            Append (~ISOTYPICS[i][3], s);
+       else
+            Append (~ISOTYPICS, <t, IDIMS[s], [s]>); 
+       end if;                 
        LieRank := StringToInteger (&cat [t[i] : i in [2..#t]]);
        ECs := [ ExtractBlock (EC[j], pos, pos, degs[s], degs[s]) : j in [1..#EC] ];
        FCs := [ ExtractBlock (FC[j], pos, pos, degs[s], degs[s]) : j in [1..#FC] ];
@@ -206,15 +280,51 @@ vprint MatrixLie, 1 : "modulo C, the exponentiated group has order", #EXP div #C
                                                      j in [1..Ngens (OUTs)] ];
        pos +:= degs[s];
   end for;
+  assert __NormalizesAlgebra (LC, aut_gens);
+  vprint MatrixLie, 2 : "    isotypic component data:", ISOTYPICS;
   
+  perm_gens := [ ];
+  ID := Identity (MatrixAlgebra (k, n));
+  for s in [1..#ISOTYPICS] do
+       S := ISOTYPICS[s][3];   // the simples to be permuted
+       if #S gt 1 then
+           for i in [1..#S-1] do
+               for j in [i+1..#S] do
+                   // try to interchange simples S[i] and S[j]
+                   I := SIMPLES[S[i]];
+                   J := SIMPLES[S[j]];
+                   isit, g := IsConjugate (I, J);
+                   if isit then
+                       h := ID;
+                       InsertBlock (~h, MatrixAlgebra (k, degs[S[i]])!0, POSITIONS[S[i]], POSITIONS[S[i]]);
+                       InsertBlock (~h, MatrixAlgebra (k, degs[S[j]])!0, POSITIONS[S[j]], POSITIONS[S[j]]);
+                       InsertBlock (~h, g^-1, POSITIONS[S[i]], POSITIONS[S[j]]);
+                       InsertBlock (~h, g, POSITIONS[S[j]], POSITIONS[S[i]]);
+                       Append (~perm_gens, h);
+                   end if;
+               end for;
+           end for;
+       end if;
+  end for;
+  assert __NormalizesAlgebra (LC, perm_gens);
+  
+  // add in conjugated auto gens
   aut_gens := [ C^-1 * aut_gens[i] * C : i in [1..#aut_gens] ];
-  AUT := sub < G | aut_gens , EXP >;  
-vprint MatrixLie, 1 : "modulo the exponentiated part, the automorphism group has order", #AUT div #EXP;
-
-  // STILL NEED TO INSERT GENERATORS FOR THE GROUP PERMUTING ISOTYPIC COMPONENTS
+  ord := #H;
+  H := sub < G | aut_gens , H >;  
+  vprint MatrixLie, 1 : "  [ GLNormalizer: algebra autos / cent-exp has order", #H div ord, "]";
+  vprint MatrixLie, 2 : CompositionFactors (H);
   
-assert __NormalizesLieAlgebra (L, [ AUT.i : i in [1..Ngens (AUT)] ]); 
+  // add in conjugated perm gens
+  perm_gens := [ C^-1 * perm_gens[i] * C : i in [1..#perm_gens] ];
+  ord := #H;
+  H := sub < G | H , perm_gens >;
+  vprint MatrixLie, 1 : "  [ GLNormalizer: permutation autos / algebra autos has order", #H div ord;
+  vprint MatrixLie, 2 : CompositionFactors (H);
   
-return AUT;
+  // final sanity check
+  assert __NormalizesAlgebra (L, [ H.i : i in [1..Ngens (H)] ]);   
+  
+return H;
 
 end intrinsic;

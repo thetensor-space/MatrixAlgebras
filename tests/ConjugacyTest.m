@@ -52,3 +52,18 @@ ExperimentB := function (k, stypes1, rtypes1, stypes2, rtypes2)
   end if;
 return isit;
 end function;
+
+
+nruns := 10;
+ST1 := [ "A1" , "A1" ];  RT1 := [ [1,1] , [0,1] ];
+ST2 := [ "A1" , "A1" ];  RT2 := [ [0,1] , [1,1] ];
+"testing", nruns, "instances of semisimple conjugacy with simple actions";
+flags := [ ];
+for i in [1..nruns] do
+  Append (~flags, ExperimentB (k, ST1, RT1, ST2, RT2));
+end for;
+Set (flags);
+
+
+
+

@@ -11,19 +11,12 @@ __IsConjugate_IRRED := function (J1, E1, F1, J2, E2, F2)
      C := C1^-1 * C2;
      isit := (K1 eq K2);
      if not isit then
-          vprint MatrixLie, 1 : "crystal bases do not give module similarity";
-          vprint MatrixLie, 1 : "C1 =", C1;
-          vprint MatrixLie, 1 : "C2 =", C2; 
+          vprint MatrixLie, 1 : "\t [ __IsC_IRR: crystal bases do not give module similarity ]";
+          vprint MatrixLie, 1 : "\t [ __IsC_IRR: C1 =", C1, "]";
+          vprint MatrixLie, 1 : "\t [ __IsC_IRR: C2 =", C2, "]"; 
      end if;
      if isit then
           assert J2 eq sub < Generic (J1) | [ C^-1 * Matrix (J1.i) * C : i in [1..Ngens (J1)] ] >;
-          E1C := [ C^-1 * Matrix (E1[i]) * C : i in [1..#E1] ];
-          F1C := [ C^-1 * Matrix (F1[i]) * C : i in [1..#F1] ];
-          CHEV_EQ := forall { i : i in [1..#E1C] | E1C[i] eq Matrix (E2[i]) };
-          if not CHEV_EQ then
-               vprintf MatrixLie, 1 : "\t\t   E1C =\n"; E1C;
-               vprintf MatrixLie, 1 : "\t\t   E2 =\n"; E2;
-          end if;
      end if;
 return isit, C; 
 end function; 
@@ -42,7 +35,9 @@ __PreprocessSemisimple := function (L)
      d := Degree (L);
      V := VectorSpace (k, d);
      /* first find ideals and sort them */
+     tt := Cputime ();
      IDEALS := IndecomposableSummands (L);
+     vprint MatrixLie, 1 : "\t [ __PS decomposed L into minimal ideals in time", Cputime (tt), "]";
      n := #IDEALS; S := {1..n};
      Sort (~IDEALS, func<x,y| MySort (SemisimpleType(x),SemisimpleType(y))>);
      TYPES := [ SemisimpleType (IDEALS[i]) : i in [1..n] ];
@@ -58,7 +53,9 @@ __PreprocessSemisimple := function (L)
      PERM := DirectProduct ([ SymmetricGroup (part) : part in PARTITION ]); 
      /* next find the indecomposable summands of V and their supports */
      M := RModule (L);
+     tt := Cputime ();
      SUMMANDS := IndecomposableSummands (M);
+     vprint MatrixLie, 1 : "\t [ __PS found indecomposable summands of M in time", Cputime (tt), "]";
      m := #SUMMANDS; T := {1..m};
      SUMMANDS := [ sub < V | [ Vector (M!(S.i)) : i in [1..Dimension (S)] ] > : 
                        S in SUMMANDS ];
@@ -92,6 +89,7 @@ intrinsic IsConjugate (L1::AlgMatLie, L2::AlgMatLie : PARTITION := [ ]) ->
                  BoolElt, AlgMatElt
   { True iff L1 and L2 are conjugate in the ambient group of invertible matrices. }
   
+  ttt := Cputime ();
   flag, LL1 := HasLeviSubalgebra (L1);
   require (flag and (L1 eq LL1)) : 
      "at present the function works only for semisimple Lie algebras";
@@ -99,6 +97,7 @@ intrinsic IsConjugate (L1::AlgMatLie, L2::AlgMatLie : PARTITION := [ ]) ->
   flag, LL2 := HasLeviSubalgebra (L2);
   require (flag and (L2 eq LL2)) : 
      "at present the function works only for semisimple Lie algebras";
+  vprint MatrixLie, 1 : "  [ IsConjugate: found both Levi subalgebras in time", Cputime (ttt), "]";
 
   require (Degree (L1) eq Degree (L2)) and #BaseRing (L1) eq #BaseRing (L2) :
      "matrix algebras must have the same degree and be defined over the same finite field";
@@ -106,8 +105,10 @@ intrinsic IsConjugate (L1::AlgMatLie, L2::AlgMatLie : PARTITION := [ ]) ->
 // TO DO: REDUCE TO NONTRIVIAL PART OF DECOMPOSITION INTO  V = V.L + Null(L)
      
   /* must be able to compute a Chevalley basis .. insert try / catch in case we can't? */
+  ttt := Cputime ();
   E1, F1 := ChevalleyBasis (L1);
   E2, F2 := ChevalleyBasis (L2);
+  vprint MatrixLie, 1 : "  [ IsConjugate: found both Chevalley bases in time", Cputime (ttt), "]";
   
   /* deal with the irreducible case */
   if IsIrreducible (RModule (L1)) and IsIrreducible (RModule (L2)) then
@@ -115,10 +116,15 @@ intrinsic IsConjugate (L1::AlgMatLie, L2::AlgMatLie : PARTITION := [ ]) ->
   end if;
   
   /* next carry out the preprocessing for the conjugacy test */
+  ttt := Cputime ();
   ID1, TYPES1, PART1, PERM1, SUMS1 := __PreprocessSemisimple (L1);
   ID2, TYPES2, PART2, PERM2, SUMS2 := __PreprocessSemisimple (L2);
-vprint MatrixLie, 1 : "summand dimensions of first Lie module are", [ Dimension (U) : U in SUMS1 ];
-vprint MatrixLie, 1 : "summand dimensions of second Lie module are", [ Dimension (U) : U in SUMS2 ];
+  vprint MatrixLie, 1 : "  [ IsConjugate: summand dimensions of first Lie module are", 
+          [ Dimension (U) : U in SUMS1 ], "]";
+  vprint MatrixLie, 1 : "  [ IsConjugate: summand dimensions of second Lie module are", 
+          [ Dimension (U) : U in SUMS2 ], "]";
+  vprint MatrixLie, 1 : "  [ IsConjugate: semisimple preprocessing completed in time", 
+          Cputime (ttt), "]";
   
   /* do the quick tests */
   if TYPES1 ne TYPES2 then
@@ -137,8 +143,7 @@ vprint MatrixLie, 1 : "summand dimensions of second Lie module are", [ Dimension
   
   /* test each possible ordering of summands in L2 */
   perms := [ pi : pi in PERM1];
-vprintf MatrixLie, 1 : "testing %o", #perms; 
-vprintf MatrixLie, 1 : " permutations of the minimal ideals of the second Lie algebra";
+  vprint MatrixLie, 1 : "  [ IsConjugate: testing", #perms, "perms of min ideals of second algebra ]";
   conj := false;   // keeps track of whether or not we've found a conjugating matrix
   s := 0;
   while ((s lt #perms) and (not conj)) do
@@ -184,7 +189,6 @@ vprintf MatrixLie, 1 : " permutations of the minimal ideals of the second Lie al
                  // some elements of F2 act trivially on U2 ... discard them
                  F2U2 := [ MLieU2!(F2U2[a]) : a in [1..#F2U2] | F2U2[a] ne 0 ];
                  isit, BC := __IsConjugate_IRRED (L1U1, E1U1, F1U1, L2U2, E2U2, F2U2);
-vprintf MatrixLie, 1 : "\t\t restriction to summands conjugate? %o\n", isit;
                  if isit then
                       found := true;
                       Remove (~rem2, Position (rem2, U2));
@@ -215,10 +219,8 @@ vprintf MatrixLie, 1 : "\t\t restriction to summands conjugate? %o\n", isit;
   if (conj) then
        C := C2^-1 * D^-1 * C1;
        assert L2 eq sub < MLie | [ C * Matrix (L1.i) * C^-1 : i in [1..Ngens (L1)] ] >;
-vprint MatrixLie, 1 : "matrix Lie algebras are conjugate";
        return true, C;   
   else
-vprint MatrixLie, 1 : "matrix Lie algebras are not conjugate";
        return false, _;
   end if; 
   
