@@ -43,26 +43,26 @@ end function;
   If the simple types and representation types of the two Lie algebras coincide,
   they should be conjugate; if they do not, then they will not be conjugate.
 */
-ExperimentB := function (k, stypes1, rtypes1, stypes2, rtypes2)
-  L1 := MySemisimpleMatrixLieAlgebra (k, stypes1, rtypes1 : SCRAMBLE := true);
-  L2 := MySemisimpleMatrixLieAlgebra (k, stypes2, rtypes2 : SCRAMBLE := true);
+
+k := GF (11);
+nruns := 10;
+ST1 := [ "A1" , "A1" ];  RT1 := [ [2,0] , [1,0] ];
+ST2 := [ "A1" , "A1" ];  RT2 := [ [1,0] , [2,0] ];
+"testing", nruns, "instances of semisimple conjugacy with simple actions";
+flags := [ ];
+for i in [1..nruns] do
+  "i =", i;
+  L1 := MySemisimpleMatrixLieAlgebra (k, ST1, RT1 : SCRAMBLE := true);
+  L2 := MySemisimpleMatrixLieAlgebra (k, ST2, RT2 : SCRAMBLE := true);
   isit, C := IsConjugate (L1, L2);
   if isit then   // final sanity check
      assert L2 eq sub < Generic (L1) | [ C * Matrix (L1.i) * C^-1 : i in [1..Ngens (L1)] ] >;
   end if;
-return isit;
-end function;
-
-
-nruns := 10;
-ST1 := [ "A1" , "A1" ];  RT1 := [ [1,1] , [0,1] ];
-ST2 := [ "A1" , "A1" ];  RT2 := [ [0,1] , [1,1] ];
-"testing", nruns, "instances of semisimple conjugacy with simple actions";
-flags := [ ];
-for i in [1..nruns] do
-  Append (~flags, ExperimentB (k, ST1, RT1, ST2, RT2));
+  Append (~flags, isit);
 end for;
 Set (flags);
+
+// NOTE: Magma often spins its wheels on ChevalleyBasis calls.
 
 
 
