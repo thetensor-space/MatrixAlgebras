@@ -2,4 +2,4 @@
   Global variables
 */
 
-declare verbose MatrixLie, 2;
+declare verbose MatrixAlgebras, 2;

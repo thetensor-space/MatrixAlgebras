@@ -1,43 +1,9 @@
-/*
-    INPUT:
-      (1) A, a k-algebra (e.g. Lie or associative) of matrices.
-      (2) S, a set of invertible linear transformations of the 
-          underlying k-algebra.    
-    OUTPUT: true if, and only  if, A^s = A for all s in S.
-*/
-__NormalizesAlgebra := function (A, S)  
-     k := BaseRing (A);
-     n := Degree (A);
-     MS := KMatrixSpace (k, n, n);
-     X := KMatrixSpaceWithBasis ([ MS!Matrix (x) : x in Basis (A) ]);    
-return forall { s : s in S | 
-          forall { i : i in [1..Ngens (X)] |
-              s^-1 * X.i * s in X
-                 }
-              };             
-end function;
+/* functions to compute normalizers of matrix *-algebras */
 
-__CentralizesAlgebra := function (A, S);
-     k := BaseRing (A);
-     n := Degree (A);
-     MS := KMatrixSpace (k, n, n);
-     X := KMatrixSpaceWithBasis ([ MS!Matrix (x) : x in Basis (A) ]);    
-return forall { s : s in S | 
-          forall { i : i in [1..Ngens (X)] |
-              s^-1 * X.i * s eq X.i
-                 }
-              };             
-end function;
-
-
-__AnnihilatesModule := function (J, U)
-return forall { i : i in [1..Ngens (J)] | forall { t : t in [1..Ngens (U)] |
-          U.t * J.i eq 0 } };
-end function;
-
+import "../utility.m" : __AnnihilatesModule,  __IsBlockDiagonalMatrix;
 
 /* returns generators for the lift of Out(J) to GL(V) when J < gl(V) is simple. */
-__OuterAutosOfSimple := function (J, E, F)
+__AutosOfSimpleLie := function (J, E, F)
 
      assert IsSimple (J);
      k := BaseRing (J);
@@ -99,9 +65,10 @@ __OuterAutosOfSimple := function (J, E, F)
               Append (~D0, &*[ S[word[j]] / S[1+word[j]] : j in [1..#word] ]);
           end for;
           D0 := DiagonalMatrix (D0);
-          Di := Ci^-1 * D0 * Ci;
-          assert __NormalizesAlgebra (Ji, [Di]);  // sanity check
+          Di := GL (Nrows (D0), k)!(Ci^-1 * D0 * Ci);
+          assert Ji ^ Di eq Ji;   // sanity check
           InsertBlock (~delta, Di, pos, pos);
+          delta := GL (Nrows (delta), k)!delta;
           
           // try to lift remaining graph automorphisms
           Bi := [ Vector (Ci[a]) : a in [1..Nrows (Ci)] ];
@@ -122,7 +89,7 @@ __OuterAutosOfSimple := function (J, E, F)
                g0 := Matrix (g0);
                if Rank (g0) eq Rank (Ci) then
                    g := Ci^-1 * GL (Nrows (g0), k)!g0 * Ci;
-                   if __NormalizesAlgebra (Ji, [g]) then
+                   if Ji ^ g eq Ji then
                        InsertBlock (~GAMMA[j], g, pos, pos);
                        Append (~NGAMMA, GAMMA[j]);
                        Append (~NGA, GA[j]);
@@ -135,9 +102,8 @@ __OuterAutosOfSimple := function (J, E, F)
           pos +:= ni;
           
      end for;
-     
-     assert __NormalizesAlgebra (JC, [delta]);
-     assert __NormalizesAlgebra (JC, GAMMA);
+     assert JC ^ delta eq JC;
+     assert forall { g : g in GAMMA | JC ^ (GL(Degree(g),k)!g) eq JC };
      
      gens := [ delta ] cat 
              [ gamma : gamma in GAMMA | gamma ne Identity (MatrixAlgebra (k, n)) ];
@@ -147,23 +113,6 @@ __OuterAutosOfSimple := function (J, E, F)
 return H;
 end function;
 
-__IsBlockDiagonalMatrix := function (X, partition)
-  n := Nrows (X);
-  assert n eq Ncols (X);
-  assert n eq &+ partition;
-  pos := 1;
-  isit := true;
-  for i in [1..#partition] do
-       m := partition[i];
-       isit and:= forall { s : s in [pos..pos+m-1] |
-                    forall { t : t in [pos+m..n] | 
-                        (X[s][t] eq 0) and (X[t][s] eq 0)
-                           }
-                         };
-       pos +:= m;
-  end for;
-return isit;
-end function;
 
 /* 
 Used the same name as the function created (presumably) by Colva for groups.
@@ -188,7 +137,7 @@ intrinsic GLNormalizer (L::AlgMatLie : PARTITION := [ ]) -> GrpMat
   if #PARTITION eq 0 then
       PARTITION := [ n ];
   end if;
-  vprint MatrixLie, 1 : "  [ GLNormalizer : PARTITION =", PARTITION, "]";
+  vprint MatrixAlgebras, 1 : "  [ GLNormalizer : PARTITION =", PARTITION, "]";
   
   require (n eq &+ PARTITION) : "the specified partition is incompatible with the degree of L";
   
@@ -198,8 +147,8 @@ intrinsic GLNormalizer (L::AlgMatLie : PARTITION := [ ]) -> GrpMat
   // find a Chevalley basis for L and use it to exponentiate
   E, F := ChevalleyBasis (L);
   H := sub < G | [ Exponentiate (z) : z in E cat F ] >;
-  vprint MatrixLie, 1 : "  [ GLNormalizer: exponential subgroup has order", #H,"]";
-  vprint MatrixLie, 2 : CompositionFactors (H); 
+  vprint MatrixAlgebras, 1 : "  [ GLNormalizer: exponential subgroup has order", #H,"]";
+  vprint MatrixAlgebras, 2 : CompositionFactors (H); 
   
   // compute the restrictions of L to the blocks determined by PARTITION,  
   // and the subgroup centralizing L within GL(U1) x ... x GL(Ut)
@@ -220,11 +169,12 @@ intrinsic GLNormalizer (L::AlgMatLie : PARTITION := [ ]) -> GrpMat
       pos +:= m;
   end for;
   C := DirectProduct (CENTS);
-  assert __CentralizesAlgebra (L, [ C.i : i in [1..Ngens (C)] ]);
+  assert forall { i : i in [1..Ngens (C)] | 
+                      forall { j : j in [1..Ngens (L)] | L.j ^ C.i eq L.j } };
   ord := #H;
   H := sub < G | H , C >;
-  vprint MatrixLie, 1 : "  [ GLNormalizer: centralizer / exponential has order", #H div ord, "]";
-  vprint MatrixLie, 2 : CompositionFactors (H);
+  vprint MatrixAlgebras, 1 : "  [ GLNormalizer: centralizer / exponential has order", #H div ord, "]";
+  vprint MatrixAlgebras, 2 : CompositionFactors (H);
   
   // get the minimal ideals of L and make sure they act "simply" on V     
   MI := IndecomposableSummands (L);
@@ -236,7 +186,7 @@ intrinsic GLNormalizer (L::AlgMatLie : PARTITION := [ ]) -> GrpMat
   end if;
   IDIMS := [ [ Dimension (indV[i] meet MPART[j]) : j in [1..#MPART] ] : i in [1..#indV] ];
   assert forall { i : i in [1..#indV] | Dimension (indV[i]) eq &+ IDIMS[i] };
-  vprint MatrixLie, 2 : "    intersection dimensions:", IDIMS;
+  vprint MatrixAlgebras, 2 : "    intersection dimensions:", IDIMS;
   
   // put L into block diagonal form corresponding to the minimal ideals                    
   degs := [ Dimension (indV[i]) : i in [1..#indV] ];
@@ -274,14 +224,14 @@ intrinsic GLNormalizer (L::AlgMatLie : PARTITION := [ ]) -> GrpMat
        FCs := [ ExtractBlock (FC[j], pos, pos, degs[s], degs[s]) : j in [1..#FC] ];
        ECs := [ e : e in ECs | e ne 0 ];
        FCs := [ f : f in FCs | f ne 0 ];
-       OUTs := __OuterAutosOfSimple (Js, [ECs[i] : i in [1..LieRank]], [FCs[i] : 
+       OUTs := __AutosOfSimpleLie (Js, [ECs[i] : i in [1..LieRank]], [FCs[i] : 
                             i in [1..LieRank]]);
        aut_gens cat:= [ InsertBlock (Identity (G), OUTs.j, pos, pos) : 
                                                      j in [1..Ngens (OUTs)] ];
        pos +:= degs[s];
   end for;
-  assert __NormalizesAlgebra (LC, aut_gens);
-  vprint MatrixLie, 2 : "    isotypic component data:", ISOTYPICS;
+  assert forall { g : g in aut_gens | LC ^ (GL (Nrows (g), k)!g) eq LC }; 
+  vprint MatrixAlgebras, 2 : "    isotypic component data:", ISOTYPICS;
   
   perm_gens := [ ];
   ID := Identity (MatrixAlgebra (k, n));
@@ -306,25 +256,28 @@ intrinsic GLNormalizer (L::AlgMatLie : PARTITION := [ ]) -> GrpMat
            end for;
        end if;
   end for;
-  assert __NormalizesAlgebra (LC, perm_gens);
+  assert forall { g : g in perm_gens | LC ^ (GL (Nrows (g), k)!g) eq LC };
   
   // add in conjugated auto gens
   aut_gens := [ C^-1 * aut_gens[i] * C : i in [1..#aut_gens] ];
   ord := #H;
   H := sub < G | aut_gens , H >;  
-  vprint MatrixLie, 1 : "  [ GLNormalizer: algebra autos / cent-exp has order", #H div ord, "]";
-  vprint MatrixLie, 2 : CompositionFactors (H);
+  vprint MatrixAlgebras, 1 : "  [ GLNormalizer: algebra autos / cent-exp has order", #H div ord, "]";
+  vprint MatrixAlgebras, 2 : CompositionFactors (H);
   
   // add in conjugated perm gens
   perm_gens := [ C^-1 * perm_gens[i] * C : i in [1..#perm_gens] ];
   ord := #H;
   H := sub < G | H , perm_gens >;
-  vprint MatrixLie, 1 : "  [ GLNormalizer: permutation autos / algebra autos has order", #H div ord;
-  vprint MatrixLie, 2 : CompositionFactors (H);
+  vprint MatrixAlgebras, 1 : "  [ GLNormalizer: permutation autos / algebra autos has order", #H div ord;
+  vprint MatrixAlgebras, 2 : CompositionFactors (H);
   
   // final sanity check
-  assert __NormalizesAlgebra (L, [ H.i : i in [1..Ngens (H)] ]);   
+  assert forall { i : i in [1..Ngens (H)] | L ^ H.i eq L };  
   
 return H;
 
 end intrinsic;
+
+
+

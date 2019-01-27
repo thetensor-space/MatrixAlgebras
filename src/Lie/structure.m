@@ -1,3 +1,5 @@
+/* functions to elucidate and access the structure of matrix Lie algebras */
+
 /* 
     INPUT:
       (1) L, an irreducible representation of a simple Lie algebra.

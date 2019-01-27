@@ -1,9 +1,31 @@
+/* some constructor functions for Lie algebras */
+
 __KMatrixSpaceToLieAlgebra := function (X)
   k := BaseRing (X);
   d := Nrows (X.1);
   ML := MatrixLieAlgebra (k, d);
 return sub < ML | [ Matrix (X.i) : i in [1..Ngens (X)] ] >;
 end function;                    
+
+
+MyDerivationAlgebra := function (T)
+    c := Dimension (Domain (T)[1]);
+    d := Dimension (Domain (T)[2]);
+    e := Dimension (Codomain (T));
+    D := DerivationAlgebra (T);
+    k := BaseRing (D);
+    n := Degree (D);
+    DU := sub < MatrixLieAlgebra (k, c) |
+                [ ExtractBlock (D.i, 1, 1, c, c) : i in [1..Ngens (D)] ] >;
+    DV := sub < MatrixLieAlgebra (k, d) |
+                [ ExtractBlock (D.i, c+1, c+1, d, d) : i in [1..Ngens (D)] ] >;
+    DW := sub < MatrixLieAlgebra (k, e) |
+                [ ExtractBlock (D.i, c+d+1, c+d+1, e, e) : i in [1..Ngens (D)] ] >;
+    fU := hom < D -> DU | x :-> DU!ExtractBlock (x, 1, 1, c, c) >;
+    fV := hom < D -> DU | x :-> DU!ExtractBlock (x, c+1, c+1, d, d) >;
+    fW := hom < D -> DU | x :-> DU!ExtractBlock (x, c+d+1, c+d+1, e, e) >;
+return D, <fU, fV, fW>;
+end function;
 
 
 MyNaturalRep := function (name, k : SCRAMBLE := false, CHEVALLEY := false)
@@ -355,6 +377,7 @@ assert #SC eq Binomial (r, 2);
      G := IACAlgebraToUCSGroup (q, r, SC);
 return H, G;
 end function; 
+
 
 
 

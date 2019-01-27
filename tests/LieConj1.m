@@ -1,5 +1,5 @@
 /* some functions to test the IsConjugate function for Lie algebras */
-load "~/MagmaPackages/MatrixLie/examples/constructions.m";
+load "~/MagmaPackages/MatAlg/examples/constructions.m";
 
 /* Explore conjugacy of irreducible tensor product representations. */
 ExperimentA := function (k, type1, type2, nruns)
@@ -44,8 +44,8 @@ end function;
   they should be conjugate; if they do not, then they will not be conjugate.
 */
 
-k := GF (11);
-nruns := 10;
+k := GF (7);
+nruns := 1;
 ST1 := [ "A1" , "A1" ];  RT1 := [ [2,0] , [1,0] ];
 ST2 := [ "A1" , "A1" ];  RT2 := [ [1,0] , [2,0] ];
 "testing", nruns, "instances of semisimple conjugacy with simple actions";

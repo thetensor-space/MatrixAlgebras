@@ -1,5 +1,6 @@
-import "utility.m" : MySort;
-import "normalizer.m" : __AnnihilatesModule;
+/* functions to decide conjugacy of matrix Lie algebras */
+
+import "../utility.m" : __AnnihilatesModule;
 
 /* decides conjugacy between two matrix Lie algebras acting irreducibly on their modules */
 __IsConjugate_IRRED := function (J1, E1, F1, J2, E2, F2)  
@@ -11,15 +12,26 @@ __IsConjugate_IRRED := function (J1, E1, F1, J2, E2, F2)
      C := C1^-1 * C2;
      isit := (K1 eq K2);
      if not isit then
-          vprint MatrixLie, 1 : "\t [ __IsC_IRR: crystal bases do not give module similarity ]";
-          vprint MatrixLie, 1 : "\t [ __IsC_IRR: C1 =", C1, "]";
-          vprint MatrixLie, 1 : "\t [ __IsC_IRR: C2 =", C2, "]"; 
+          vprint MatrixAlgebras, 1 : "\t [ __IsC_IRR: crystal bases do not give module similarity ]";
+          vprint MatrixAlgebras, 1 : "\t [ __IsC_IRR: C1 =", C1, "]";
+          vprint MatrixAlgebras, 1 : "\t [ __IsC_IRR: C2 =", C2, "]"; 
      end if;
      if isit then
           assert J2 eq sub < Generic (J1) | [ C^-1 * Matrix (J1.i) * C : i in [1..Ngens (J1)] ] >;
      end if;
 return isit, C; 
 end function; 
+
+
+__MySort := function (str1, str2)
+     if str1 eq str2 then
+         return 0;
+     elif str1 lt str2 then
+         return -1;
+     else 
+         return 1;
+     end if;
+end function;
 
 /*
   Given a semisimple matrix Lie algebra, L, gather data to help determine conjugacy
@@ -37,9 +49,9 @@ __PreprocessSemisimple := function (L)
      /* first find ideals and sort them */
      tt := Cputime ();
      IDEALS := IndecomposableSummands (L);
-     vprint MatrixLie, 1 : "\t [ __PS decomposed L into minimal ideals in time", Cputime (tt), "]";
+     vprint MatrixAlgebras, 1 : "\t [ __PS decomposed L into minimal ideals in time", Cputime (tt), "]";
      n := #IDEALS; S := {1..n};
-     Sort (~IDEALS, func<x,y| MySort (SemisimpleType(x),SemisimpleType(y))>);
+     Sort (~IDEALS, func<x,y| __MySort (SemisimpleType(x),SemisimpleType(y))>);
      TYPES := [ SemisimpleType (IDEALS[i]) : i in [1..n] ];
      /* find isomorphisms classes of minimal ideals and basic permutation group */
      PARTITION := [ ];
@@ -55,7 +67,7 @@ __PreprocessSemisimple := function (L)
      M := RModule (L);
      tt := Cputime ();
      SUMMANDS := IndecomposableSummands (M);
-     vprint MatrixLie, 1 : "\t [ __PS found indecomposable summands of M in time", Cputime (tt), "]";
+     vprint MatrixAlgebras, 1 : "\t [ __PS found indecomposable summands of M in time", Cputime (tt), "]";
      m := #SUMMANDS; T := {1..m};
      SUMMANDS := [ sub < V | [ Vector (M!(S.i)) : i in [1..Dimension (S)] ] > : 
                        S in SUMMANDS ];
@@ -86,7 +98,7 @@ end function;
 */   
 
 intrinsic IsConjugate (L1::AlgMatLie, L2::AlgMatLie : PARTITION := [ ]) ->
-                 BoolElt, AlgMatElt
+                 BoolElt, GrpMatElt
   { True iff L1 and L2 are conjugate in the ambient group of invertible matrices. }
   
   ttt := Cputime ();
@@ -97,33 +109,35 @@ intrinsic IsConjugate (L1::AlgMatLie, L2::AlgMatLie : PARTITION := [ ]) ->
   flag, LL2 := HasLeviSubalgebra (L2);
   require (flag and (L2 eq LL2)) : 
      "at present the function works only for semisimple Lie algebras";
-  vprint MatrixLie, 1 : "  [ IsConjugate: found both Levi subalgebras in time", Cputime (ttt), "]";
+  vprint MatrixAlgebras, 1 : "  [ IsConjugate: found both Levi subalgebras in time", Cputime (ttt), "]";
 
   require (Degree (L1) eq Degree (L2)) and #BaseRing (L1) eq #BaseRing (L2) :
      "matrix algebras must have the same degree and be defined over the same finite field";
      
 // TO DO: REDUCE TO NONTRIVIAL PART OF DECOMPOSITION INTO  V = V.L + Null(L)
+
+// ALSO TO DO: INTRODUCE PARTITION
      
   /* must be able to compute a Chevalley basis .. insert try / catch in case we can't? */
   ttt := Cputime ();
   E1, F1 := ChevalleyBasis (L1);
   E2, F2 := ChevalleyBasis (L2);
-  vprint MatrixLie, 1 : "  [ IsConjugate: found both Chevalley bases in time", Cputime (ttt), "]";
+  vprint MatrixAlgebras, 1 : "  [ IsConjugate: found both Chevalley bases in time", Cputime (ttt), "]";
   
   /* deal with the irreducible case */
   if IsIrreducible (RModule (L1)) and IsIrreducible (RModule (L2)) then
-       return __IsConjugate_IRRED (L1, E1, F1, L2, E2, F2);
+       return GL (Degree (L1), BaseRing (L1))!__IsConjugate_IRRED (L1, E1, F1, L2, E2, F2);
   end if;
   
   /* next carry out the preprocessing for the conjugacy test */
   ttt := Cputime ();
   ID1, TYPES1, PART1, PERM1, SUMS1 := __PreprocessSemisimple (L1);
   ID2, TYPES2, PART2, PERM2, SUMS2 := __PreprocessSemisimple (L2);
-  vprint MatrixLie, 1 : "  [ IsConjugate: summand dimensions of first Lie module are", 
+  vprint MatrixAlgebras, 1 : "  [ IsConjugate: summand dimensions of first Lie module are", 
           [ Dimension (U) : U in SUMS1 ], "]";
-  vprint MatrixLie, 1 : "  [ IsConjugate: summand dimensions of second Lie module are", 
+  vprint MatrixAlgebras, 1 : "  [ IsConjugate: summand dimensions of second Lie module are", 
           [ Dimension (U) : U in SUMS2 ], "]";
-  vprint MatrixLie, 1 : "  [ IsConjugate: semisimple preprocessing completed in time", 
+  vprint MatrixAlgebras, 1 : "  [ IsConjugate: semisimple preprocessing completed in time", 
           Cputime (ttt), "]";
   
   /* do the quick tests */
@@ -143,7 +157,7 @@ intrinsic IsConjugate (L1::AlgMatLie, L2::AlgMatLie : PARTITION := [ ]) ->
   
   /* test each possible ordering of summands in L2 */
   perms := [ pi : pi in PERM1];
-  vprint MatrixLie, 1 : "  [ IsConjugate: testing", #perms, "perms of min ideals of second algebra ]";
+  vprint MatrixAlgebras, 1 : "  [ IsConjugate: testing", #perms, "perms of min ideals of second algebra ]";
   conj := false;   // keeps track of whether or not we've found a conjugating matrix
   s := 0;
   while ((s lt #perms) and (not conj)) do
@@ -219,9 +233,12 @@ intrinsic IsConjugate (L1::AlgMatLie, L2::AlgMatLie : PARTITION := [ ]) ->
   if (conj) then
        C := C2^-1 * D^-1 * C1;
        assert L2 eq sub < MLie | [ C * Matrix (L1.i) * C^-1 : i in [1..Ngens (L1)] ] >;
-       return true, C;   
+       return true, GL (Degree (L1), BaseRing (L1))!C;   
   else
        return false, _;
   end if; 
   
 end intrinsic;
+
+
+             
