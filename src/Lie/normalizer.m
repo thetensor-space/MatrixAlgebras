@@ -88,7 +88,7 @@ __AutosOfSimpleLie := function (J, E, F)
                end for;
                g0 := Matrix (g0);
                if Rank (g0) eq Rank (Ci) then
-                   g := Ci^-1 * GL (Nrows (g0), k)!g0 * Ci;
+                   g := GL (Nrows (g0), k)!(Ci^-1 * g0 * Ci);
                    if Ji ^ g eq Ji then
                        InsertBlock (~GAMMA[j], g, pos, pos);
                        Append (~NGAMMA, GAMMA[j]);

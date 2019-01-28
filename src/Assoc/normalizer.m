@@ -1,6 +1,6 @@
 /* functions to compute normalizers of associative matrix algebras */
 
-import "../utility.m" : __AnnihilatesModule;
+import "../utility.m" : __AnnihilatesModule, __IsBlockDiagonalMatrix;
 
 __galois_generator_irred := function (J)
      MA := Generic (Parent (J));
