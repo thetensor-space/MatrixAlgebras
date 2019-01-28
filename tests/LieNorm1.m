@@ -1,5 +1,5 @@
 /* some functions to test the GLNormalizer function for Lie algebras */
-load "~/MagmaPackages/MatAlg/examples/constructions.m";
+load "~/MagmaPackages/MatrixAlgebras/examples/Lie_constructs.m";
 
 /*
   A dinky example to illustrate the effect of PARTITION on the permutation
@@ -7,7 +7,7 @@ load "~/MagmaPackages/MatAlg/examples/constructions.m";
   within the domain / codomain specified by PARTITION.
 */
 k := GF (7);
-SetVerbose ("MatrixLie", 1);
+SetVerbose ("MatrixAlgebras", 1);
 PART1 := [];
 PART2 := [2,2,2];
 ST := [ "A1" , "A1" , "A1" ];

@@ -126,7 +126,14 @@ intrinsic IsConjugate (L1::AlgMatLie, L2::AlgMatLie : PARTITION := [ ]) ->
   
   /* deal with the irreducible case */
   if IsIrreducible (RModule (L1)) and IsIrreducible (RModule (L2)) then
-       return GL (Degree (L1), BaseRing (L1))!__IsConjugate_IRRED (L1, E1, F1, L2, E2, F2);
+       isit, C := __IsConjugate_IRRED (L1, E1, F1, L2, E2, F2);
+       if isit then
+            g := GL (Degree (L1), BaseRing (L1))!C;
+            assert L1^g eq L2;
+            return true, g;
+       else
+            return false, _;
+       end if;
   end if;
   
   /* next carry out the preprocessing for the conjugacy test */
@@ -232,8 +239,9 @@ intrinsic IsConjugate (L1::AlgMatLie, L2::AlgMatLie : PARTITION := [ ]) ->
 
   if (conj) then
        C := C2^-1 * D^-1 * C1;
-       assert L2 eq sub < MLie | [ C * Matrix (L1.i) * C^-1 : i in [1..Ngens (L1)] ] >;
-       return true, GL (Degree (L1), BaseRing (L1))!C;   
+       g := GL (Degree (L1), BaseRing (L1))!C;
+       assert L1^g eq L2;
+       return true, g;   
   else
        return false, _;
   end if; 
