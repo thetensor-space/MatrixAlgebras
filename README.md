@@ -1,3 +1,5 @@
+# MatrixAlgebras
+
 A Magma package for matrix Lie algebras defined over finite fields by:
 
 Peter A. Brooksbank, Bucknell University
