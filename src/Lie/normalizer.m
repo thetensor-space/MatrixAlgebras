@@ -152,7 +152,7 @@ intrinsic GLNormalizer (L::AlgMatLie : PARTITION := [ ]) -> GrpMat
   
   // compute the restrictions of L to the blocks determined by PARTITION,  
   // and the subgroup centralizing L within GL(U1) x ... x GL(Ut)
-  BLOCKS := [ ];
+//  BLOCKS := [ ];
   CENTS := [ ];
   MPART := [ ];
   pos := 1;
@@ -161,7 +161,7 @@ intrinsic GLNormalizer (L::AlgMatLie : PARTITION := [ ]) -> GrpMat
       Append (~MPART, sub < V | [ V.j : j in [pos..m-1+pos] ] >);
       gens := [ ExtractBlock (Matrix (L.j), pos, pos, m, m) : j in [1..Ngens (L)] ];
       Li := sub < MatrixLieAlgebra (k, m) | gens >;
-      Append (~BLOCKS, Li); 
+//      Append (~BLOCKS, Li); 
       Mi := RModule (Li);
       CentMi := EndomorphismAlgebra (Mi);
       Ci := MyUnitGroup (CentMi);
@@ -179,6 +179,7 @@ intrinsic GLNormalizer (L::AlgMatLie : PARTITION := [ ]) -> GrpMat
   // get the minimal ideals of L and make sure they act "simply" on V     
   MI := IndecomposableSummands (L);
   indV := [ sub < V | [ V.i * (J.j) : i in [1..n], j in [1..Ngens (J)] ] > : J in MI ];
+V0 := &meet [ Nullspace (Matrix (L.i)) : i in [1..Ngens (L)] ];
   if #MI gt 1 then
       require forall { s : s in [1..#MI] |
             __AnnihilatesModule (MI[s], &+ [indV[t] : t in [1..#indV] | s ne t ]) } :
@@ -190,7 +191,7 @@ intrinsic GLNormalizer (L::AlgMatLie : PARTITION := [ ]) -> GrpMat
   
   // put L into block diagonal form corresponding to the minimal ideals                    
   degs := [ Dimension (indV[i]) : i in [1..#indV] ];
-  C := Matrix (&cat [ Basis (indV[i]) : i in [1..#indV] ]);
+C := Matrix ((&cat [ Basis (indV[i]) : i in [1..#indV] ]) cat Basis (V0));
   LC := sub < Generic (L) | [ C * Matrix (L.i) * C^-1 : i in [1..Ngens (L)] ] >;
   MIC := [ sub < Generic (J) | [ C * Matrix (J.i) *C^-1 : i in [1..Ngens (J)] ] > :
                      J in MI ];
