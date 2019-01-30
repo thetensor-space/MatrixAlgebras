@@ -14,6 +14,7 @@
         Assoc
         {
              structure.m
+             unit_group.m
              cyclic.m
              normalizer.m
              conjugacy.m
