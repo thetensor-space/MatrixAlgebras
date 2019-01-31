@@ -162,8 +162,8 @@ intrinsic GLNormalizer (L::AlgMatLie : PARTITION := [ ]) -> GrpMat
       gens := [ ExtractBlock (Matrix (L.j), pos, pos, m, m) : j in [1..Ngens (L)] ];
       Li := sub < MatrixLieAlgebra (k, m) | gens >;
       Mi := RModule (Li);
-      CentMi := EndomorphismAlgebra (Mi);
-      Ci := MyUnitGroup (CentMi);
+      CentMi := EndomorphismAlgebra (Mi);  
+      isit, Ci := UnitGroupOfAlgebra (CentMi);   assert isit;
       Append (~CENTS, Ci);
       pos +:= m;
   end for;

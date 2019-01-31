@@ -58,7 +58,7 @@ __PreprocessSemisimple := function (L)
      T := S;
      while #T gt 0 do
           assert exists (t){u : u in T};
-          tpart := { u : u in T | TYPES[u] eq TYPES[t] };
+          tpart := { u : u in T | (TYPES[u] eq TYPES[t]) };
           T diff:= tpart;
           Append (~PARTITION, tpart);
      end while; 
@@ -67,11 +67,10 @@ __PreprocessSemisimple := function (L)
      M := RModule (L);
      tt := Cputime ();
      SUMMANDS := IndecomposableSummands (M);
-     vprint MatrixAlgebras, 1 : "\t [ __PS found indecomposable summands of M in time", Cputime (tt), "]";
-     m := #SUMMANDS; T := {1..m};
+     vprint MatrixAlgebras, 1 : 
+         "\t [ __PS found indecomposable summands of M in time", Cputime (tt), "]";
      SUMMANDS := [ sub < V | [ Vector (M!(S.i)) : i in [1..Dimension (S)] ] > : 
-                       S in SUMMANDS ];
-                             
+                       S in SUMMANDS ];                           
 return IDEALS, TYPES, PARTITION, PERM, SUMMANDS;
 end function;
 
@@ -101,6 +100,10 @@ intrinsic IsConjugate (L1::AlgMatLie, L2::AlgMatLie : PARTITION := [ ]) ->
                  BoolElt, GrpMatElt
   { True iff L1 and L2 are conjugate in the ambient group of invertible matrices. }
   
+  k := BaseRing (L1);
+  n := Degree (L1);
+  V := VectorSpace (k, n);
+  
   ttt := Cputime ();
   flag, LL1 := HasLeviSubalgebra (L1);
   require (flag and (L1 eq LL1)) : 
@@ -115,8 +118,6 @@ intrinsic IsConjugate (L1::AlgMatLie, L2::AlgMatLie : PARTITION := [ ]) ->
      "matrix algebras must have the same degree and be defined over the same finite field";
      
 // TO DO: REDUCE TO NONTRIVIAL PART OF DECOMPOSITION INTO  V = V.L + Null(L)
-
-// ALSO TO DO: INTRODUCE PARTITION
      
   /* must be able to compute a Chevalley basis .. insert try / catch in case we can't? */
   ttt := Cputime ();
@@ -135,6 +136,19 @@ intrinsic IsConjugate (L1::AlgMatLie, L2::AlgMatLie : PARTITION := [ ]) ->
             return false, _;
        end if;
   end if;
+  
+  if #PARTITION eq 0 then
+       PARTITION := [ n ];
+  end if;
+  
+  MODPART := [* *];
+  pos := 1;
+  for i in [1..#PARTITION] do
+        m := PARTITION[i];
+        Vi := sub < V | [ V.j : j in [pos..m-1+pos] ] >;
+        Append (~MODPART, Vi);
+        pos +:= m;
+  end for;
   
   /* next carry out the preprocessing for the conjugacy test */
   ttt := Cputime ();
@@ -164,7 +178,8 @@ intrinsic IsConjugate (L1::AlgMatLie, L2::AlgMatLie : PARTITION := [ ]) ->
   
   /* test each possible ordering of summands in L2 */
   perms := [ pi : pi in PERM1];
-  vprint MatrixAlgebras, 1 : "  [ IsConjugate: testing", #perms, "perms of min ideals of second algebra ]";
+  vprint MatrixAlgebras, 1 : 
+      "  [ IsConjugate: testing", #perms, "perms of min ideals of second algebra ]";
   conj := false;   // keeps track of whether or not we've found a conjugating matrix
   s := 0;
   while ((s lt #perms) and (not conj)) do
@@ -179,6 +194,8 @@ intrinsic IsConjugate (L1::AlgMatLie, L2::AlgMatLie : PARTITION := [ ]) ->
        while ((i lt m) and (good)) do
             i +:= 1;
             U1 := SUMS1[i];
+            GOOD := [ y : y in [1..#MODPART] | U1 subset MODPART[y] ];
+            assert #GOOD eq 1; x := GOOD[1];
             d1 := Dimension (U1);
             MLieU1 := MatrixLieAlgebra (k, d1);
             L1U1 := sub < MLieU1 |
@@ -191,7 +208,9 @@ intrinsic IsConjugate (L1::AlgMatLie, L2::AlgMatLie : PARTITION := [ ]) ->
             F1U1 := [ MLieU1!(F1U1[a]) : a in [1..#F1U1] | F1U1[a] ne 0 ];
             S1 := __SupportOfModule (ID1, U1);
             poss2 := [ b : b in [1..#rem2] | S1 eq __SupportOfModule (ID2, rem2[b])^pi 
-                                         and Dimension (rem2[b]) eq d1 ];
+                                         and Dimension (rem2[b]) eq d1 
+                                         and rem2[b] subset MODPART[x]
+                                         ];
 
             found := false;   // keeps track of whether or not we've found a U2
                               // such that LU1 is conjugate to LU2
@@ -239,7 +258,7 @@ intrinsic IsConjugate (L1::AlgMatLie, L2::AlgMatLie : PARTITION := [ ]) ->
 
   if (conj) then
        C := C2^-1 * D^-1 * C1;
-       g := GL (Degree (L1), BaseRing (L1))!C;
+       g := (GL (Degree (L1), BaseRing (L1))!C)^-1;
        assert L1^g eq L2;
        return true, g;   
   else

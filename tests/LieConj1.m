@@ -1,5 +1,5 @@
 /* some functions to test the IsConjugate function for Lie algebras */
-load "~/MagmaPackages/MatAlg/examples/constructions.m";
+load "~/MagmaGit/MatrixAlgebras/examples/Lie_constructs.m";
 
 /* Explore conjugacy of irreducible tensor product representations. */
 ExperimentA := function (k, type1, type2, nruns)
@@ -55,9 +55,6 @@ for i in [1..nruns] do
   L1 := MySemisimpleMatrixLieAlgebra (k, ST1, RT1 : SCRAMBLE := true);
   L2 := MySemisimpleMatrixLieAlgebra (k, ST2, RT2 : SCRAMBLE := true);
   isit, C := IsConjugate (L1, L2);
-  if isit then   // final sanity check
-     assert L2 eq sub < Generic (L1) | [ C * Matrix (L1.i) * C^-1 : i in [1..Ngens (L1)] ] >;
-  end if;
   Append (~flags, isit);
 end for;
 Set (flags);

@@ -35,7 +35,7 @@ __AutosOfSimpleAssoc := function (A)
        // write down semilinear group for top left block
      gens := [ ExtractBlock (B.i, 1, 1, e, e) : i in [1..Ngens (B)] ];
      R := sub < MatrixAlgebra (k, e) | gens >;
-     Rtimes := MyUnitGroup (R);   
+     isit, Rtimes := UnitGroupOfAlgebra (R);   assert isit;
      gens := [ GL (e, k)!(Rtimes.i) : i in [1..Ngens (Rtimes)] ];
      X := RModule (R);
      assert IsIrreducible (X);
@@ -101,7 +101,7 @@ intrinsic GLNormalizer (A::AlgMat : PARTITION := [ ]) -> GrpMat
       Append (~BLOCKS, Ai); 
       Mi := RModule (Ai);
       CentMi := EndomorphismAlgebra (Mi);
-      Ci := MyUnitGroup (CentMi);
+      isit, Ci := UnitGroupOfAlgebra (CentMi);     assert isit;
       Append (~CENTS, Ci);
       pos +:= m;
   end for;

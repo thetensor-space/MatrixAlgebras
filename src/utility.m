@@ -57,14 +57,6 @@ end intrinsic;
          * useful in various contexts beyond it.
          */
 
-// this needs to be changed in the distributed version.
-intrinsic MyUnitGroup (A::AlgMat) -> GrpMat
-  { The group of units of the matrix algebra A. }
-  isit, U := UnitGroup (A);
-  assert isit;
-return U;
-end intrinsic;
-
 
 // I could not find this in Magma but it seems general enough to warrant an intrinsic
 intrinsic ElementaryMatrix (K::FldFin, m::RngIntElt, n::RngIntElt, 

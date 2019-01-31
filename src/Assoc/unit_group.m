@@ -1,9 +1,4 @@
-
-
-/* functions to elucidate and access the structure of associative matrix algebras */
-
-
-     /*------- Unit group os associative algebras -------*/
+          /*------- unit group of an associative algebra -------*/
 
 /*
   This function, which exists in the Magma distribution, will now be maintained
