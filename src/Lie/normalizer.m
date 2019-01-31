@@ -103,7 +103,7 @@ __AutosOfSimpleLie := function (J, E, F)
           
      end for;
      assert JC ^ delta eq JC;
-     assert forall { g : g in GAMMA | JC ^ (GL(Degree(g),k)!g) eq JC };
+     assert forall { g : g in GAMMA | JC ^ (GL(Nrows(g),k)!g) eq JC };
      
      gens := [ delta ] cat 
              [ gamma : gamma in GAMMA | gamma ne Identity (MatrixAlgebra (k, n)) ];
@@ -126,6 +126,7 @@ intrinsic GLNormalizer (L::AlgMatLie : PARTITION := [ ]) -> GrpMat
   { Returns the group of invertible matrices normalizing the matrix Lie algebra L. }
   
   flag, LL := HasLeviSubalgebra (L);
+  vprint MatrixAlgebras, 1 : "verified that L is its own Levi subalgebra";
   require (flag and (L eq LL)) : 
      "at present the function works only for semisimple Lie algebras";
   
@@ -146,9 +147,8 @@ intrinsic GLNormalizer (L::AlgMatLie : PARTITION := [ ]) -> GrpMat
      
   // find a Chevalley basis for L and use it to exponentiate
   E, F := ChevalleyBasis (L);
+  vprint MatrixAlgebras, 1 : "found a Chevalley basis for L";
   H := sub < G | [ Exponentiate (z) : z in E cat F ] >;
-  vprint MatrixAlgebras, 1 : "  [ GLNormalizer: exponential subgroup has order", #H,"]";
-  vprint MatrixAlgebras, 2 : CompositionFactors (H); 
   
   // compute the restrictions of L to the blocks determined by PARTITION,  
   // and the subgroup centralizing L within GL(U1) x ... x GL(Ut)
