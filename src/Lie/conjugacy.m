@@ -5,6 +5,14 @@ import "../utility.m" : __AnnihilatesModule;
 /* decides conjugacy between two matrix Lie algebras acting irreducibly on their modules */
 __IsConjugate_IRRED := function (J1, E1, F1, J2, E2, F2)  
      assert IsIrreducible (RModule (J1)) and IsIrreducible (RModule (J2));
+     // catch trivial case
+     if Dimension (J1) eq 0 then
+          if Dimension (J2) eq 0 then
+               return true, Identity (MatrixAlgebra (BaseRing (J1), Degree (J1)));
+          else
+               return false, _;
+          end if;
+     end if;
      C1 := CrystalBasis (J1 : E := E1, F := F1);
      C2 := CrystalBasis (J2 : E := E2, F := F2);
      K1 := sub < Generic (J1) | [ C1 * Matrix (J1.i) * C1^-1 : i in [1..Ngens (J1)] ] >;
@@ -117,7 +125,13 @@ intrinsic IsConjugate (L1::AlgMatLie, L2::AlgMatLie : PARTITION := [ ]) ->
   require (Degree (L1) eq Degree (L2)) and #BaseRing (L1) eq #BaseRing (L2) :
      "matrix algebras must have the same degree and be defined over the same finite field";
      
-// TO DO: REDUCE TO NONTRIVIAL PART OF DECOMPOSITION INTO  V = V.L + Null(L)
+  if Dimension (L1) eq 0 then
+       if Dimension (L2) eq 0 then
+            return true, Identity (GL (n, k));
+       else
+            return false, _;
+       end if;
+  end if;
      
   /* must be able to compute a Chevalley basis .. insert try / catch in case we can't? */
   ttt := Cputime ();
