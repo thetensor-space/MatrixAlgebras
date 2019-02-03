@@ -1,6 +1,7 @@
 /* functions to compute normalizers of associative matrix algebras */
 
 import "../utility.m" : __AnnihilatesModule, __IsBlockDiagonalMatrix;
+import "conjugacy.m" : __PreprocessSemisimple;
 
 __galois_generator_irred := function (J)
      MA := Generic (Parent (J));
@@ -80,12 +81,20 @@ intrinsic GLNormalizer (A::AlgMat : PARTITION := [ ]) -> GrpMat
   if #PARTITION eq 0 then
       PARTITION := [ n ];
   end if;
-  vprint MatrixAlgebras, 1 : "  [ GLNormalizer : PARTITION =", PARTITION, "]";
   
   require (n eq &+ PARTITION) : "the specified partition is incompatible with the degree of A";
   
   require forall { i : i in [1..Ngens (A)] | __IsBlockDiagonalMatrix (Matrix (A.i), PARTITION) } :
      "the specified partition is incompatible with the block structure of A";
+     
+  // deal with trivial case
+  if Dimension (A) eq 1 then     /// A consists of just scalar matrices
+       H := GL (PARTITION[1], k);
+       for i in [2..#PARTITION] do
+            H := DirectProduct (H, GL (PARTITION[i], k));
+       end for;
+       return H;
+  end if;
      
   // compute the restrictions of A to the blocks determined by PARTITION,  
   // and the subgroup centralizing A within GL(U1) x ... x GL(Ut)
@@ -108,88 +117,63 @@ intrinsic GLNormalizer (A::AlgMat : PARTITION := [ ]) -> GrpMat
   H := DirectProduct (CENTS);
   assert forall { i : i in [1..Ngens (A)] |
                       forall { j : j in [1..Ngens (H)] | (A.i) ^ (H.j) eq A.i } };
-  vprint MatrixAlgebras, 2 : CompositionFactors (H);
+  vprint MatrixAlgebras, 2 : "built the group centralizing A";
   
-  // get the minimal ideals of A    
-  MI := MinimalIdeals (A);
-  indV := [ sub < V | [ V.i * (J.j) : i in [1..n], j in [1..Ngens (J)] ] > : J in MI ];
-      // the following is a relic from the Lie algebra function; the condition always holds here
-  if #MI gt 1 then
-      assert forall { s : s in [1..#MI] |
-            __AnnihilatesModule (MI[s], &+ [indV[t] : t in [1..#indV] | s ne t ]) };
-  end if;
-  IDIMS := [ [ Dimension (indV[i] meet MPART[j]) : j in [1..#MPART] ] : i in [1..#indV] ];
-  assert forall { i : i in [1..#indV] | Dimension (indV[i]) eq &+ IDIMS[i] };
-  vprint MatrixAlgebras, 2 : "    intersection dimensions:", IDIMS;
-  
-  // put A into block diagonal form corresponding to the minimal ideals                   
-  degs := [ Dimension (indV[i]) : i in [1..#indV] ];
-  C := Matrix (&cat [ Basis (indV[i]) : i in [1..#indV] ]);
-  AC := sub < Generic (A) | [ C * Matrix (A.i) * C^-1 : i in [1..Ngens (A)] ] >;
-  MIC := [ sub < Generic (J) | [ C * Matrix (J.i) *C^-1 : i in [1..Ngens (J)] ] > :
-                     J in MI ];
-  
-  // extract the blocks and construct the unit groups and outer automorphisms on each block
-  pos := 1;
-  aut_gens := [ ];
-  ISOTYPICS := [* *];
+  // get the structural information about A
+  MIC, C, type, pos, INTS := __PreprocessSemisimple (A : PART := PARTITION);
+  vprint MatrixAlgebras, 2 :  "semisimple type of A", type;
+
+  // compute the automorphisms of minimal ideals
+  aut_gens :=  [ ];
   SIMPLES := [ ];
-  POSITIONS := [ ];
   for s in [1..#MIC] do
-       Append (~POSITIONS, pos);
-       Js := sub < MatrixAlgebra (k, degs[s]) |
-            [ ExtractBlock ((MIC[s]).j, pos, pos, degs[s], degs[s]) : 
-                          j in [1..Ngens (MIC[s])] ] >;
+       ds := &* type[s];
+       Js := sub < MatrixAlgebra (k, ds) | 
+                     [ ExtractBlock ((MIC[s]).j, pos[s], pos[s], ds, ds) :
+                         j in [1..Ngens (MIC[s])] ] 
+                 >;
        assert IsSimple (Js);
        Append (~SIMPLES, Js);
-       if s eq 1 then
-            Append (~ISOTYPICS, <IDIMS[1], [s]>);
-       elif exists (i){ j : j in [1..#ISOTYPICS] | 
-                         ISOTYPICS[j][1] eq IDIMS[s] } then
-            Append (~ISOTYPICS[i][2], s);
-       else
-            Append (~ISOTYPICS, <IDIMS[s], [s]>); 
-       end if;   
        Us := __AutosOfSimpleAssoc (Js);
-       aut_gens cat:= [ InsertBlock (Identity (G), Us.j, pos, pos) : 
+       aut_gens cat:= [ InsertBlock (Identity (G), Us.j, pos[s], pos[s]) : 
                                                      j in [1..Ngens (Us)] ];
-       pos +:= degs[s];
   end for;
-  assert forall { g : g in aut_gens | AC ^ (GL (Nrows (g), k)!g) eq AC };
-  vprint MatrixAlgebras, 2 : "    isotypic component data:", ISOTYPICS;
+  vprint MatrixAlgebras, 2 : "lifted the automorphisms of the minimal ideals";
+  //AC := sub < Generic (A) | [ C * A.i * C^-1 : i in [1..Ngens (A)] ] >;
+  //assert forall { g : g in aut_gens | AC ^ (GL (Nrows (g), k)!g) eq AC };
   
+  // construct the group permuting the terms in each isotypic component
   perm_gens := [ ];
   ID := Identity (MatrixAlgebra (k, n));
-  for s in [1..#ISOTYPICS] do
-       S := ISOTYPICS[s][2];   // the simples to be permuted
-       if #S gt 1 then
-           for i in [1..#S-1] do
-               for j in [i+1..#S] do
-                   // try to interchange simples S[i] and S[j]
-                   I := SIMPLES[S[i]];
-                   J := SIMPLES[S[j]];
-                   isit, g := IsConjugate (I, J); // THIS NEEDS TO BE REWRITTEN
-                   if isit then
-                       h := ID;
-                       InsertBlock (~h, MatrixAlgebra (k, degs[S[i]])!0, POSITIONS[S[i]], POSITIONS[S[i]]);
-                       InsertBlock (~h, MatrixAlgebra (k, degs[S[j]])!0, POSITIONS[S[j]], POSITIONS[S[j]]);
-                       InsertBlock (~h, g^-1, POSITIONS[S[i]], POSITIONS[S[j]]);
-                       InsertBlock (~h, g, POSITIONS[S[j]], POSITIONS[S[i]]);
-                       Append (~perm_gens, h);
-                   end if;
-               end for;
-           end for;
-       end if;
+  ISOTYPICS := { 
+     { j : j in [1..#SIMPLES] | (type[i] eq type[j]) and (INTS[i] eq INTS[j]) } :
+           i in [1..#SIMPLES] };
+  vprint MatrixAlgebras, 2 : "ISOTYPICS", ISOTYPICS;
+  for SI in ISOTYPICS do
+       LI := [ i : i in SI ];
+       for i in [1..#LI-1] do
+            for j in [i+1..#LI] do
+                 I := SIMPLES[LI[i]];
+                 J := SIMPLES[LI[j]];
+                 // interchange ideals I and J
+                 isit, g := IsConjugate (I, J);   assert isit;
+                 h := ID;
+                 InsertBlock (~h, MatrixAlgebra (k, Degree (I))!0, pos[LI[i]], pos[LI[i]]);
+                 InsertBlock (~h, MatrixAlgebra (k, Degree (I))!0, pos[LI[j]], pos[LI[j]]);
+                 InsertBlock (~h, g, pos[LI[i]], pos[LI[j]]);
+                 InsertBlock (~h, g^-1, pos[LI[j]], pos[LI[i]]);
+                 Append (~perm_gens, h);
+            end for;
+       end for;
   end for;
-  assert forall { g : g in perm_gens | AC ^ (GL (Nrows (g), k)!g) eq AC };
-  
-  // add in conjugated auto gens
+  //assert forall { g : g in perm_gens | AC ^ (GL (Nrows (g), k)!g) eq AC };
+  vprint MatrixAlgebras, 2 : "built the group permuting the terms of the isotypic components";
+   
+  // add in conjugated automorphism and permutation gens
   aut_gens := [ C^-1 * aut_gens[i] * C : i in [1..#aut_gens] ];
-  H := sub < G | aut_gens , H >;  
-  
-  // add in conjugated perm gens
   perm_gens := [ C^-1 * perm_gens[i] * C : i in [1..#perm_gens] ];
-  H := sub < G | H , perm_gens >;
+  
+  H := sub < G | H , aut_gens , perm_gens >;  
   
   // final sanity check
   assert forall { i : i in [1..Ngens (H)] | A ^ (H.i) eq A };  
