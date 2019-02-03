@@ -108,9 +108,31 @@ intrinsic IsConjugate (L1::AlgMatLie, L2::AlgMatLie : PARTITION := [ ]) ->
                  BoolElt, GrpMatElt
   { True iff L1 and L2 are conjugate in the ambient group of invertible matrices. }
   
+  if Degree (L1) ne Degree (L2) then 
+       vprint MatrixAlgebras, 1 : "L1 and L2 have different degrees";
+       return false, _;
+  end if;
+  
+  if Dimension (L1) ne Dimension (L2) then
+       vprint MatrixAlgebras, 1 : "L1 and L2 have different dimensions";
+       return false, _;
+  end if;
+  
   k := BaseRing (L1);
   n := Degree (L1);
   V := VectorSpace (k, n);
+  
+  if #PARTITION eq 0 then
+       PARTITION := [ n ];
+  end if;
+  
+  require (n eq &+ PARTITION) : "the specified partition is incompatible with the degree of L";
+  
+  require forall { i : i in [1..Ngens (L1)] | __IsBlockDiagonalMatrix (Matrix (L1.i), PARTITION) } :
+     "the specified partition is incompatible with the block structure of L1";
+     
+  require forall { i : i in [1..Ngens (L2)] | __IsBlockDiagonalMatrix (Matrix (L2.i), PARTITION) } :
+     "the specified partition is incompatible with the block structure of L2";
   
   ttt := Cputime ();
   flag, LL1 := HasLeviSubalgebra (L1);
@@ -149,10 +171,6 @@ intrinsic IsConjugate (L1::AlgMatLie, L2::AlgMatLie : PARTITION := [ ]) ->
        else
             return false, _;
        end if;
-  end if;
-  
-  if #PARTITION eq 0 then
-       PARTITION := [ n ];
   end if;
   
   MODPART := [* *];
