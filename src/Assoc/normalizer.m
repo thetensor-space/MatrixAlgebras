@@ -70,6 +70,8 @@ end function;
 intrinsic GLNormalizer (A::AlgMat : PARTITION := [ ]) -> GrpMat
   { Returns the group of invertible matrices normalizing the matrix algebra A. }
   
+  require Identity (Generic (A)) in A : "A must be a unital ring";
+  
   require IsSemisimple (A) : 
      "at present the function works only for semisimple algebras";
   

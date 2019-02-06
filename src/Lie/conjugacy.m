@@ -1,6 +1,6 @@
 /* functions to decide conjugacy of matrix Lie algebras */
 
-import "../utility.m" : __AnnihilatesModule;
+import "../utility.m" : __AnnihilatesModule, __IsBlockDiagonalMatrix;
 
 /* decides conjugacy between two matrix Lie algebras acting irreducibly on their modules */
 __IsConjugate_IRRED := function (J1, E1, F1, J2, E2, F2)  

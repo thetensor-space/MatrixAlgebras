@@ -222,7 +222,8 @@ intrinsic IsConjugate (A1::AlgMat, A2::AlgMat : PARTITION := []) -> BoolElt , Gr
           if not isit2 then 
                return false, _;
           else
-               isit, C := __IsConjugateCyclic (T1, A2);
+               B2 := sub < Generic (A2) | T2 >; 
+               isit, C := __IsConjugateCyclic (T1, B2);
                if not isit then
                     return false, _;
                else
