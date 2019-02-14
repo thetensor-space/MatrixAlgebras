@@ -22,8 +22,7 @@
         Star
         {
              structure.m
-             normalizer.m
-             conjugacy.m
+      
         }
   }
 }
