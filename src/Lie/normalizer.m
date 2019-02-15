@@ -216,10 +216,23 @@ intrinsic GLNormalizer (L::AlgMatLie : PARTITION := [ ], SANITY := false, ORDER 
   MI := IndecomposableSummands (L);
   indV := [ sub < V | [ V.i * (J.j) : i in [1..n], j in [1..Ngens (J)] ] > : J in MI ];
   V0 := &meet [ Nullspace (Matrix (L.i)) : i in [1..Ngens (L)] ];
+
   if #MI gt 1 then
+
+/*
       require forall { s : s in [1..#MI] |
             __AnnihilatesModule (MI[s], &+ [indV[t] : t in [1..#indV] | s ne t ]) } :
 "all L-module summands must be irreducible J-modules for some minimal ideal J of L (only in this restricted setting do the current methods work)";
+*/
+
+// PAB inserted the following on Feb 15, 2019 at request of EAO to permit continuous testing
+if not forall { s : s in [1..#MI] |
+            __AnnihilatesModule (MI[s], &+ [indV[t] : t in [1..#indV] | s ne t ]) } then
+vprint MatrixAlgebras, 2 : "not all L-summands are irreducible J-modules for some minimal ideal";
+return false;
+
+end if;
+
   end if;
   IDIMS := [ [ Dimension (indV[i] meet MPART[j]) : j in [1..#MPART] ] : i in [1..#indV] ];
   // compulsory sanity check 2
