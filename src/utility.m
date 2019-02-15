@@ -34,6 +34,10 @@ end intrinsic;
 intrinsic '^' (A::AlgMat, g::GrpMatElt) -> AlgMat
   {A^g}
   B := sub < Generic (A) | [ A.i ^ g : i in [1..Ngens (A)] ] >;
+  // for *-algebras ... will have its own conjugator when it has its own type
+  if assigned A`Star then
+       B`Star := hom < B -> B | x :-> ( (x ^ (g^-1)) @ A`Star ) ^ g >;
+  end if;
 return B;
 end intrinsic;
 
@@ -49,6 +53,7 @@ intrinsic '^' (L::AlgMatLie, g::GrpMatElt) -> AlgMatLie
   M := sub < Generic (L) | [ L.i ^ g : i in [1..Ngens (L)] ] >;
 return M;
 end intrinsic;
+
 
 
         /*

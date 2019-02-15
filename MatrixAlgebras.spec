@@ -16,6 +16,7 @@
              structure.m
              unit_group.m
              cyclic.m
+             simple.m
              normalizer.m
              conjugacy.m
         }

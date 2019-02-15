@@ -27,22 +27,27 @@ end function;
 
 /*
   The following function seems to be embedded in various intrinsics
-  for matrix algebras and *-algebras. It seems a good idea to isolate
-  it, although we don't necessarily want to make it an intrinsic itself.
+  for matrix algebras and *-algebras. It seems a good idea to isolate it.
   
   INPUT:  simple matrix k-algebra A acting irreducibly on its k-space
   OUTPUT:  a full matrix K-algebra, B, where K is an extension of k, 
            together with inverse k-algebra isomorphisms f and g. 
 */
-__IsomorphismWithStandardSimple := function (A)
+intrinsic SimpleAlgebraToFullMatrixAlgebra (A::AlgMat) -> AlgMat, Map, Map
+
+  { Compute inverse k-algebra isomorphisms between the simple k-algebra A, k a finite field,
+    and the (full) K-algebra B to which it is isomorphic, where K is an extension of k. }
 
      k := BaseRing (A);
+     
+     require IsFinite (k) : "A must be an algebra over a finite field";
+     
      d := Degree (A);
      M := RModule (A);
-          assert IsIrreducible (M);
+          
+     require IsIrreducible (M) : "A must act irreducibly on its underlying row space";
+    
      isit, zA, e := IsAbsolutelyIrreducible (M);
-     ZA := sub < A | zA >;
-     m := d div e;
      
      // trivial case
      if isit then
@@ -52,6 +57,11 @@ __IsomorphismWithStandardSimple := function (A)
           g := hom < B -> A | y :-> y >;
           return A, f, g;
      end if;
+     
+     m := d div e;
+     ZA := sub < A | zA >;
+               // sanity check
+               assert Dimension (A) eq m^2 * e;
      
      // write ZA in block diagonal form
      MZA := RModule (ZA);
@@ -64,6 +74,7 @@ __IsomorphismWithStandardSimple := function (A)
      blocks := < Identity (MatrixAlgebra (k, e)) >;
      for i in [2..#IMZA] do
           isit, bl := IsIsomorphic (IMZA[1], IMZA[i]);
+               // sanity check
                assert isit;
           Append (~blocks, bl);
      end for;
@@ -75,22 +86,11 @@ __IsomorphismWithStandardSimple := function (A)
      Z := sub < MatrixAlgebra (k, e) | ExtractBlock (z, 1, 1, e, e) >;
      K, ZtoK, KtoZ := AlgebraToField (Z);
      B := MatrixAlgebra (K, m);
-     f := hom < A -> B | x :->  __condense (E * x * E^-1, ZtoK) >;
-     g := hom < B -> A | y :->  E^-1 * __inflate (y, KtoZ) * E >;
-return B, f, g;
-end function;
+     AtoB := hom < A -> B | x :->  __condense (E * x * E^-1, ZtoK) >;
+     BtoA := hom < B -> A | y :->  E^-1 * __inflate (y, KtoZ) * E >;
+     
+return B, AtoB, BtoA;
+
+end intrinsic;
 
 
-// just for testing purposes
-TEST := function (k, m, e)
-  MA := MatrixAlgebra (k, m*e);
-  repeat
-       x := Random (MatrixAlgebra (k, e));
-       mx := MinimalPolynomial (x);
-  until IsIrreducible (mx);
-  z := DiagonalJoin (< x : i in [1..m] >);
-  C := Centralizer (MA, sub < MA | z >);
-  g := Random (GL (m*e, k));
-  A := sub < MA | [ g * C.i * g^-1 : i in [1..Ngens (C)] ] >;
-return A;
-end function;
