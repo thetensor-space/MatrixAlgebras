@@ -1,0 +1,1 @@
+/* functions to build examples of *-algebras for testing purposes */

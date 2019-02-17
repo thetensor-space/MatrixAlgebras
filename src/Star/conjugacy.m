@@ -23,8 +23,8 @@ __IsConjugate_IRRED := function (S1, S2)
   if not isit then 
        return false, _;
   end if;
-  S1g := S1^g;    // this inherits the * from S1
-  
+  S1g := S1^g;    // this inherits the * from S1  
+
   // move to the full matrix algebra over the correct field
   T, S2toT, TtoS2 := SimpleAlgebraToFullMatrixAlgebra (S2);
 
@@ -33,33 +33,62 @@ __IsConjugate_IRRED := function (S1, S2)
   star2 := hom < T -> T | x :-> ((x @ TtoS2) @ S2`Star) @ S2toT >;
   T1g := T;    
   T1g`Star := star1g;
-  assert RecogniseClassicalSSA (T1g);
   T2 := T;     
   T2`Star := star2;
-  assert RecogniseClassicalSSA (T2);
-  param := SimpleParameters  (T1g);
   
-  // if these *-algebras have different parameters then they are not conjugate
-  if param ne SimpleParameters (T2) then
-       return false, _;
-  end if;
+  // retrieve the classical forms defining the involutions ... also need exchange case
   
-  // retrieve the classical forms defining the involutions
-  
-  // just bilinear form for now
+  // just bilinear forms for now ... also need unitary case
+  /* 
+    ALSO: in the redesign for *-algebras, use data structures 
+    that make this information easy to access.
+  */ 
   M1g := RModule (T1g);
   dM1g := RModule (sub < T | [ Transpose (T1g.i @ T1g`Star) : i in [1..Ngens (T1g)] ] >);
   isit, X1g := IsIsomorphic (M1g, dM1g);     assert isit;
   
+  M2 := RModule (T2);
+  dM2 := RModule (sub < T | [ Transpose (T2.i @ T2`Star) : i in [1..Ngens (T2)] ] >);
+  isit, X2 := IsIsomorphic (M2, dM2);     assert isit;
   
-  /*
-  assert (S2 ^ h eq S2);
+  // compare the forms X1g and X2
+  if X1g + Transpose (X1g) eq 0 then
+       if X2 + Transpose (X2) eq 0 then
+            C1 := TransformForm (X1g, "symplectic");
+            C2 := TransformForm (X2, "symplectic");
+            H := C2 * C1^-1;
+                   // sanity check: H takes one form to the other
+                   assert H * X1g * Transpose (H) eq X2;
+            HH := GL (Degree (T), BaseRing (T))!H;
+                   // sanity check HH respects to *'s on T1g and T2
+                   assert forall { i : i in [1..Ngens (T1g)] | 
+                                   (T1g.i @ T1g`Star) ^ HH eq (T1g.i ^ HH) @ T2`Star };
+       else
+            assert X2 eq Transpose (X2);
+            return false, _;
+       end if;
+  else
+       assert X1g eq Transpose (X1g);
+       if X2 eq Transpose (X2) then
+       
+       else
+            assert X2 + Transpose (X2) eq 0;
+            return false, _;
+       end if;
+  end if;
   
-  assert forall { i : i in [1..Ngens (S1)] | 
-                                    (S1.i @ S1`Star) ^ g eq (S1.i ^g) @ S2`Star };
-  */
+  h := Parent (g)!(H @ TtoS2);
+         // sanity check : h normalizes S2 and respects the *'s on S1g and S2
+         assert S2^h eq S2;
+         assert forall { i : i in [1..Ngens (S1g)] |
+                             (S1g.i @ S1g`Star) ^ h eq (S1g.i ^ h) @ S2`Star };
+  g := g * h;
   
-return X1g;
+  // final sanity check: g conjugates S1 to S2 and respects the *'s on these algebras
+  assert S1^g eq S2;
+  assert forall { i : i in [1..Ngens (S1)] | (S1.i @ S1`Star) ^ g eq (S1.i ^ g) @ S2`Star };
+  
+return g;
      
 end function;
 
