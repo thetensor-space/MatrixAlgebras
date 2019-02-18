@@ -24,6 +24,8 @@ __IsConjugate_IRRED := function (S1, S2)
        return false, _;
   end if;
   S1g := S1^g;    // this inherits the * from S1  
+  assert forall { i : i in [1..Ngens (S1)] |
+                             (S1.i @ S1`Star) ^ g eq (S1.i ^ g) @ S1g`Star };
 
   // move to the full matrix algebra over the correct field
   T, S2toT, TtoS2 := SimpleAlgebraToFullMatrixAlgebra (S2);
@@ -31,9 +33,9 @@ __IsConjugate_IRRED := function (S1, S2)
   // put the two different involutions
   star1g := hom < T -> T | x :-> ((x @ TtoS2) @ S1g`Star) @ S2toT >;
   star2 := hom < T -> T | x :-> ((x @ TtoS2) @ S2`Star) @ S2toT >;
-  T1g := T;    
+  T1g := sub < Generic (T) | [ T.i : i in [1..Ngens (T)] ] >;    
   T1g`Star := star1g;
-  T2 := T;     
+  T2 := sub < Generic (T) | [ T.i : i in [1..Ngens (T)] ] >;   
   T2`Star := star2;
   
   // retrieve the classical forms defining the involutions ... also need exchange case
@@ -56,13 +58,14 @@ __IsConjugate_IRRED := function (S1, S2)
        if X2 + Transpose (X2) eq 0 then
             C1 := TransformForm (X1g, "symplectic");
             C2 := TransformForm (X2, "symplectic");
-            H := C2 * C1^-1;
+            H := C1 * C2^-1;
                    // sanity check: H takes one form to the other
-                   assert H * X1g * Transpose (H) eq X2;
+                   assert H^-1 * X1g * Transpose (H^-1) eq X2;
             HH := GL (Degree (T), BaseRing (T))!H;
                    // sanity check HH respects to *'s on T1g and T2
                    assert forall { i : i in [1..Ngens (T1g)] | 
                                    (T1g.i @ T1g`Star) ^ HH eq (T1g.i ^ HH) @ T2`Star };
+
        else
             assert X2 eq Transpose (X2);
             return false, _;
@@ -78,10 +81,12 @@ __IsConjugate_IRRED := function (S1, S2)
   end if;
   
   h := Parent (g)!(H @ TtoS2);
+  
          // sanity check : h normalizes S2 and respects the *'s on S1g and S2
          assert S2^h eq S2;
          assert forall { i : i in [1..Ngens (S1g)] |
                              (S1g.i @ S1g`Star) ^ h eq (S1g.i ^ h) @ S2`Star };
+                             
   g := g * h;
   
   // final sanity check: g conjugates S1 to S2 and respects the *'s on these algebras
