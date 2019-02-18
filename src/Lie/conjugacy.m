@@ -154,6 +154,13 @@ intrinsic IsConjugate (L1::AlgMatLie, L2::AlgMatLie : PARTITION := [ ]) ->
             return false, _;
        end if;
   end if;
+  
+// PAB inserted the following on Feb 18 to ensure that SemisimpleType does not report error.
+KF1 := KillingForm (L1);   KF2 := KillingForm (L2);
+if Dimension (Nullspace (KF1)) + Dimension (Nullspace (KF2)) gt 0 then
+vprint MatrixAlgebras, 2 : "Killing form is degenerate";
+return false, _;
+end if;
      
   /* must be able to compute a Chevalley basis .. insert try / catch in case we can't? */
   ttt := Cputime ();

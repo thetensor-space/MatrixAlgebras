@@ -139,6 +139,13 @@ intrinsic GLNormalizer (L::AlgMatLie : PARTITION := [ ], SANITY := false, ORDER 
   vprint MatrixAlgebras, 1 : "verified that L is its own Levi subalgebra";
   require (flag and (L eq LL)) : 
      "at present the function works only for semisimple Lie algebras";
+     
+// PAB inserted the following on Feb 18 to ensure that SemisimpleType does not report error.
+KF := KillingForm (L);
+if Dimension (Nullspace (KF)) gt 0 then
+vprint MatrixAlgebras, 2 : "Killing form is degenerate";
+return false;
+end if;
    
   k := BaseRing (L); 
   n := Degree (L);
