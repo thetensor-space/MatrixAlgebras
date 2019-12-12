@@ -93,7 +93,11 @@ __AutosOfSimpleLie := function (J, E, F)
                        InsertBlock (~GAMMA[j], g, pos, pos);
                        Append (~NGAMMA, GAMMA[j]);
                        Append (~NGA, GA[j]);
+                   else
+                       vprint MatrixAlgebras, 1 : "graph automorphism did not lift";
                    end if;
+               else
+                   vprint MatrixAlgebras, 1 : "graph automorphism did not lift";
                end if;
           end for; 
           GA := NGA;
@@ -403,7 +407,7 @@ end if;
 
   // final compulsory sanity check
   assert forall { i : i in [1..Ngens (NORM)] | L ^ NORM.i eq L };  
-  
+
 return NORM;
 
 end intrinsic;

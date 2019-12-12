@@ -50,7 +50,7 @@ return L, _, _;
 end function;
 
 
-MyAdjointRep := function (name, k : SCRAMBLE := false, CHEVALLEY := false)
+MyAdjointRep1 := function (name, k : SCRAMBLE := false, CHEVALLEY := false)
      L0 := LieAlgebra (name, k);
      ad := AdjointRepresentation (L0);
      n := Degree (Image (ad));
@@ -69,6 +69,22 @@ MyAdjointRep := function (name, k : SCRAMBLE := false, CHEVALLEY := false)
           return adL, adE, adF;
      end if;
 return adL, _, _;
+end function;
+
+MyAdjointRep2 := function (L, k : BASIS := [])
+     n := Dimension (L);
+     if #BASIS gt 0 then
+          B := BASIS;
+          assert (#B eq n) and (L eq sub < L | B >);
+     else
+          B := Basis (L);
+     end if;
+     "B =", B;
+     MS := KMatrixSpace (k, Degree (L), Degree (L));
+     MS := KMatrixSpaceWithBasis ([ MS!(B[i]) : i in [1..#B] ]);
+     gens := [ Matrix ([ Coordinates (MS, MS!(B[j] * B[i])) : j in [1..n] ]) : i in [1..n] ];
+     ML := MatrixLieAlgebra (k, n);
+return [ ML!(gens[i]) : i in [1..n] ];
 end function;
 
 
@@ -108,7 +124,9 @@ sl3_example := function (k)
             Matrix ([ Coordinates (M, stF0[i] * M.j + M.j * Transpose (stF0[i])) :
                          j in [1..6] ])
                  );
-     end for;    
+     end for;  
+     E := [ L!(E[i]) : i in [1..#E] ];  
+     F := [ L!(F[i]) : i in [1..#F] ];
 return L, E, F; 
 end function;
 
