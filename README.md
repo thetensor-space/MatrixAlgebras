@@ -6,7 +6,7 @@ Peter A. Brooksbank, Bucknell University
 Joshua Maglione, Kent State University
 James B. Wilson, Colorado State University
 
-Copyright 2016--2018. GNU Public Liscence v. 3.
+Copyright 2016--2020. MIT Liscence.
 
 Contents:
 
